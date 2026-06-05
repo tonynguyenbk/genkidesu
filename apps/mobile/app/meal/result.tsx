@@ -5,7 +5,7 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
-import { trpc } from '../../lib/trpc';
+import { trpc, queryClient } from '../../lib/trpc';
 import type { VisionResult, DetectedDish } from '@genki/api';
 
 type EditableDish = DetectedDish & { key: string };
@@ -108,6 +108,9 @@ export default function MealResultScreen() {
 
   const confirm = trpc.meal.confirmLog.useMutation({
     onSuccess: () => {
+      // Invalidate home screen queries so they refetch immediately
+      queryClient.invalidateQueries({ queryKey: [['meal', 'getDailySummary']] });
+      queryClient.invalidateQueries({ queryKey: [['meal', 'getDailyLogs']] });
       Alert.alert('Đã lưu! ✓', 'Bữa ăn đã được ghi nhận thành công.', [
         { text: 'OK', onPress: () => router.replace('/(tabs)') },
       ]);

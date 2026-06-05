@@ -1,12 +1,8 @@
 import { Stack, usePathname } from 'expo-router';
 import { Platform, View, StyleSheet, useWindowDimensions } from 'react-native';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { trpc, trpcClient } from '../lib/trpc';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { trpc, trpcClient, queryClient } from '../lib/trpc';
 import { WebSidebar } from '../components/WebSidebar';
-
-const queryClient = new QueryClient({
-  defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
-});
 
 function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();

@@ -1,5 +1,18 @@
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, Platform } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, Platform, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { trpc } from '../../lib/trpc';
+
+function WeekBar({ day, pct, active, cal }: { day: string; pct: number; active: boolean; cal: number }) {
+  return (
+    <View style={styles.barCol}>
+      <Text style={styles.barCalLabel}>{cal > 0 ? cal : ''}</Text>
+      <View style={styles.barTrack}>
+        <View style={[styles.barFill, { height: `${Math.max(pct, 2)}%` as any, backgroundColor: active ? '#2ECC71' : '#D1FAE5' }]} />
+      </View>
+      <Text style={[styles.barDay, active && { color: '#2ECC71', fontWeight: '700' }]}>{day}</Text>
+    </View>
+  );
+}
 
 function StatCard({ label, value, unit, icon, color, change }: {
   label: string; value: string; unit: string; icon: string; color: string; change?: string;
@@ -14,29 +27,58 @@ function StatCard({ label, value, unit, icon, color, change }: {
           <Text style={styles.statUnit}>{unit}</Text>
         </View>
       </View>
-      {change && <Text style={styles.statChange}>{change}</Text>}
+      {change && <Text style={[styles.statChange, { color: change.startsWith('↑') ? '#2ECC71' : '#EF4444' }]}>{change}</Text>}
     </View>
   );
 }
 
-function WeekBar({ day, pct, active }: { day: string; pct: number; active: boolean }) {
-  return (
-    <View style={styles.barCol}>
-      <View style={styles.barTrack}>
-        <View style={[styles.barFill, { height: `${pct}%` as any, backgroundColor: active ? '#2ECC71' : '#D1FAE5' }]} />
-      </View>
-      <Text style={[styles.barDay, active && { color: '#2ECC71', fontWeight: '700' }]}>{day}</Text>
-    </View>
-  );
-}
-
-const WEEK = [
-  { day: 'T2', pct: 82 }, { day: 'T3', pct: 95 }, { day: 'T4', pct: 60 },
-  { day: 'T5', pct: 75 }, { day: 'T6', pct: 88 }, { day: 'T7', pct: 45 },
-  { day: 'CN', pct: 35, active: true },
-];
+const DAY_NAMES = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
 
 export default function StatsScreen() {
+  const profiles = trpc.profile.list.useQuery(undefined, { retry: false });
+  const profile = profiles.data?.[0];
+
+  // Build last 7 days
+  const today = new Date();
+  const last7Days = Array.from({ length: 7 }, (_, i) => {
+    const d = new Date(today);
+    d.setDate(today.getDate() - (6 - i));
+    return d;
+  });
+
+  // Query weekly summaries
+  const weeklySummaries = last7Days.map((date) => {
+    const d = new Date(date);
+    d.setHours(12, 0, 0, 0);
+    return trpc.meal.getDailySummary.useQuery(
+      { profileId: profile?.id ?? '', date: d.toISOString() },
+      { enabled: !!profile?.id, retry: false },
+    );
+  });
+
+  const caloriesGoal = (profile?.nutritionTargets as any)?.calories ?? 1920;
+  const summaryData = weeklySummaries.map((q) => q.data?.totalCalories ?? 0);
+  const maxCal = Math.max(...summaryData, 1);
+
+  // Calc weekly averages
+  const activeDays = summaryData.filter((c) => c > 0);
+  const avgCalories = activeDays.length ? Math.round(activeDays.reduce((s, c) => s + c, 0) / activeDays.length) : 0;
+  const totalCalories = summaryData.reduce((s, c) => s + c, 0);
+
+  // Today's data
+  const todayIdx = 6;
+  const todayData = weeklySummaries[todayIdx]?.data;
+  const streak = (() => {
+    let count = 0;
+    for (let i = todayIdx; i >= 0; i--) {
+      if (summaryData[i]! > 0) count++;
+      else break;
+    }
+    return count;
+  })();
+
+  const isLoading = weeklySummaries.some((q) => q.isLoading);
+
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -48,34 +90,76 @@ export default function StatsScreen() {
         {/* Weekly chart */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>Calories theo tuần</Text>
-          <Text style={styles.cardSub}>Trung bình: 1,740 kcal/ngày</Text>
-          <View style={styles.barChart}>
-            {WEEK.map((d) => (
-              <WeekBar key={d.day} day={d.day} pct={d.pct} active={'active' in d && !!d.active} />
-            ))}
-          </View>
+          <Text style={styles.cardSub}>
+            Trung bình: {avgCalories > 0 ? `${avgCalories.toLocaleString()} kcal/ngày` : 'Chưa có dữ liệu'}
+          </Text>
+          {isLoading ? (
+            <ActivityIndicator color="#2ECC71" style={{ marginVertical: 20 }} />
+          ) : (
+            <View style={styles.barChart}>
+              {last7Days.map((date, i) => {
+                const dayOfWeek = date.getDay();
+                const dayName = DAY_NAMES[dayOfWeek === 0 ? 6 : dayOfWeek - 1]!;
+                const cal = summaryData[i] ?? 0;
+                const pct = (cal / Math.max(maxCal, caloriesGoal)) * 100;
+                return (
+                  <WeekBar
+                    key={i}
+                    day={dayName}
+                    pct={pct}
+                    active={i === todayIdx}
+                    cal={cal > 0 ? Math.round(cal) : 0}
+                  />
+                );
+              })}
+            </View>
+          )}
         </View>
 
-        {/* Stats grid */}
+        {/* Stats */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Tuần này</Text>
-          <StatCard label="Calories trung bình" value="1,740" unit="kcal" icon="🔥" color="#F59E0B" change="↑ 5%" />
-          <StatCard label="Protein" value="68" unit="g/ngày" icon="💪" color="#3B82F6" change="↓ 3%" />
-          <StatCard label="Nước uống" value="1.8" unit="L/ngày" icon="💧" color="#06B6D4" />
-          <StatCard label="Bước chân" value="7,240" unit="bước" icon="👟" color="#8B5CF6" change="↑ 12%" />
+          <StatCard
+            label="Calo hôm nay" icon="🔥" color="#F59E0B"
+            value={Math.round(todayData?.totalCalories ?? 0).toLocaleString()} unit="kcal"
+            change={caloriesGoal > 0 ? `${Math.round(((todayData?.totalCalories ?? 0) / caloriesGoal) * 100)}% mục tiêu` : undefined}
+          />
+          <StatCard
+            label="Protein hôm nay" icon="💪" color="#3B82F6"
+            value={(todayData?.totalProteinG ?? 0).toFixed(0)} unit="g"
+          />
+          <StatCard
+            label="Tổng calo tuần" icon="📊" color="#8B5CF6"
+            value={Math.round(totalCalories).toLocaleString()} unit="kcal"
+          />
+          <StatCard
+            label="Số bữa hôm nay" icon="🍽️" color="#2ECC71"
+            value={String(todayData?.mealCount ?? 0)} unit="bữa"
+          />
         </View>
 
         {/* Streak */}
-        <View style={[styles.card, { backgroundColor: '#F0FDF4' }]}>
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-            <Text style={{ fontSize: 36 }}>🔥</Text>
-            <View>
-              <Text style={styles.streakNum}>7 ngày</Text>
-              <Text style={styles.streakLabel}>chuỗi ghi nhận liên tiếp</Text>
+        {streak > 0 && (
+          <View style={[styles.card, { backgroundColor: '#F0FDF4' }]}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+              <Text style={{ fontSize: 36 }}>🔥</Text>
+              <View>
+                <Text style={styles.streakNum}>{streak} ngày</Text>
+                <Text style={styles.streakLabel}>chuỗi ghi nhận liên tiếp</Text>
+              </View>
+              <Ionicons name="trophy" size={28} color="#F59E0B" style={{ marginLeft: 'auto' as any }} />
             </View>
-            <Ionicons name="trophy" size={28} color="#F59E0B" style={{ marginLeft: 'auto' }} />
           </View>
-        </View>
+        )}
+
+        {/* Empty state */}
+        {!isLoading && totalCalories === 0 && (
+          <View style={styles.emptyCard}>
+            <Text style={{ fontSize: 40, textAlign: 'center' }}>📊</Text>
+            <Text style={styles.emptyTitle}>Chưa có dữ liệu</Text>
+            <Text style={styles.emptySub}>Hãy ghi nhận bữa ăn đầu tiên để xem thống kê</Text>
+          </View>
+        )}
 
         <View style={{ height: 20 }} />
       </ScrollView>
@@ -97,10 +181,11 @@ const styles = StyleSheet.create({
   },
   cardTitle: { fontSize: 15, fontWeight: '700', color: '#111827' },
   cardSub: { fontSize: 12, color: '#9CA3AF', marginTop: 2, marginBottom: 16 },
-  barChart: { flexDirection: 'row', gap: 6, height: 120, alignItems: 'flex-end' },
-  barCol: { flex: 1, alignItems: 'center', gap: 6 },
+  barChart: { flexDirection: 'row', gap: 4, height: 130, alignItems: 'flex-end' },
+  barCol: { flex: 1, alignItems: 'center', gap: 4 },
+  barCalLabel: { fontSize: 9, color: '#9CA3AF', textAlign: 'center' },
   barTrack: {
-    width: '100%', height: 100, backgroundColor: '#F3F4F6', borderRadius: 6,
+    width: '100%', flex: 1, backgroundColor: '#F3F4F6', borderRadius: 6,
     justifyContent: 'flex-end', overflow: 'hidden',
   },
   barFill: { width: '100%', borderRadius: 6 },
@@ -116,7 +201,13 @@ const styles = StyleSheet.create({
   statLabel: { fontSize: 12, color: '#9CA3AF' },
   statValue: { fontSize: 22, fontWeight: '800' },
   statUnit: { fontSize: 12, color: '#9CA3AF' },
-  statChange: { fontSize: 12, color: '#6B7280', fontWeight: '500' },
+  statChange: { fontSize: 12, fontWeight: '500' },
   streakNum: { fontSize: 22, fontWeight: '800', color: '#2ECC71' },
   streakLabel: { fontSize: 13, color: '#6B7280', marginTop: 2 },
+  emptyCard: {
+    backgroundColor: '#fff', borderRadius: 20, marginHorizontal: 16,
+    padding: 32, alignItems: 'center', gap: 8,
+  },
+  emptyTitle: { fontSize: 16, fontWeight: '700', color: '#374151' },
+  emptySub: { fontSize: 13, color: '#9CA3AF', textAlign: 'center' },
 });
