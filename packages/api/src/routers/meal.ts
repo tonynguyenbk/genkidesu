@@ -124,6 +124,30 @@ export const mealRouter = router({
       });
     }),
 
+  // Get daily summaries for a date range (for weekly charts)
+  getWeeklySummaries: protectedProcedure
+    .input(z.object({
+      profileId: z.string().uuid(),
+      from: z.string().datetime(),
+      to: z.string().datetime(),
+    }))
+    .query(async ({ input, ctx }) => {
+      const profile = await ctx.prisma.profile.findFirst({
+        where: { id: input.profileId, userId: ctx.userId },
+      });
+      if (!profile) throw new TRPCError({ code: 'FORBIDDEN' });
+
+      const from = new Date(input.from);
+      from.setHours(0, 0, 0, 0);
+      const to = new Date(input.to);
+      to.setHours(23, 59, 59, 999);
+
+      return ctx.prisma.dailySummary.findMany({
+        where: { profileId: input.profileId, summaryDate: { gte: from, lte: to } },
+        orderBy: { summaryDate: 'asc' },
+      });
+    }),
+
   // Get daily summary
   getDailySummary: protectedProcedure
     .input(z.object({ profileId: z.string().uuid(), date: z.string().datetime().optional() }))

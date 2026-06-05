@@ -97,6 +97,16 @@ export const profileRouter = router({
       return updated;
     }),
 
+  getById: protectedProcedure
+    .input(z.object({ id: z.string().uuid() }))
+    .query(async ({ input, ctx }) => {
+      const profile = await ctx.prisma.profile.findFirst({
+        where: { id: input.id, userId: ctx.userId, isActive: true },
+      });
+      if (!profile) throw new TRPCError({ code: 'NOT_FOUND' });
+      return profile;
+    }),
+
   calculateTDEE: protectedProcedure
     .input(z.object({ profileId: z.string().uuid() }))
     .query(async ({ input, ctx }) => {
