@@ -177,6 +177,25 @@ export default function CameraScreen() {
           </TouchableOpacity>
         )}
 
+        {/* Manual entry button */}
+        {!imageUri && (
+          <TouchableOpacity
+            style={styles.manualBtn}
+            onPress={() => {
+              const profileId = profiles.data?.[0]?.id;
+              if (profileId) {
+                router.push({
+                  pathname: '/food-search',
+                  params: { profileId, mealType, loggedAt: new Date().toISOString() },
+                });
+              }
+            }}
+          >
+            <Ionicons name="search" size={18} color="#6B7280" />
+            <Text style={styles.manualText}>Nhập tay món ăn</Text>
+          </TouchableOpacity>
+        )}
+
         {/* Tips */}
         {!imageUri && (
           <View style={styles.tips}>
@@ -251,6 +270,12 @@ const styles = StyleSheet.create({
   scanBtnInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
   scanBtnText: { fontSize: 17, fontWeight: '700', color: '#fff' },
 
+  manualBtn: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    marginHorizontal: 16, marginTop: 12, padding: 14, borderRadius: 14,
+    borderWidth: 1.5, borderColor: '#E5E7EB', backgroundColor: '#fff',
+  },
+  manualText: { fontSize: 14, color: '#6B7280', fontWeight: '500' },
   tips: {
     margin: 16, backgroundColor: '#FFFBEB', borderRadius: 16, padding: 16,
     borderWidth: 1, borderColor: '#FDE68A',

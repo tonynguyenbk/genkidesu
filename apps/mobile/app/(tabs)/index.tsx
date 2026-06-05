@@ -2,6 +2,7 @@ import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Pla
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { trpc } from '../../lib/trpc';
+import { ProfileSwitcher } from '../../components/ProfileSwitcher';
 
 const TODAY = new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'numeric' });
 
@@ -66,9 +67,7 @@ export default function HomeScreen() {
             </Text>
             <Text style={styles.date}>{TODAY}</Text>
           </View>
-          <TouchableOpacity style={styles.avatar} onPress={() => router.push('/(tabs)/profile')}>
-            <Text style={styles.avatarText}>{profile?.name?.[0] ?? 'G'}</Text>
-          </TouchableOpacity>
+          <ProfileSwitcher activeProfile={profile ?? null} />
         </View>
 
         {/* Calorie card */}
@@ -116,7 +115,9 @@ export default function HomeScreen() {
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Bữa ăn hôm nay</Text>
-            <Text style={styles.sectionSub}>{pct}% mục tiêu</Text>
+            <TouchableOpacity onPress={() => router.push('/meal/history')}>
+              <Text style={styles.sectionSub}>{pct}% · Xem lịch sử →</Text>
+            </TouchableOpacity>
           </View>
 
           <View style={styles.mealList}>
