@@ -21,27 +21,30 @@ redis.on('error', () => {}); // suppress connection errors
 const OTP_TTL = 300; // 5 minutes
 
 async function storeOTP(phone: string, otp: string): Promise<void> {
-  try {
-    await redis.setex(`otp:${phone}`, OTP_TTL, otp);
-  } catch {
-    // Redis unavailable — fallback to memory
-    memoryStore.set(phone, { otp, expiresAt: Date.now() + OTP_TTL * 1000 });
-  }
+  // Always store in memory as primary (instant, no network)
+  memoryStore.set(phone, { otp, expiresAt: Date.now() + OTP_TTL * 1000 });
+  // Also try Redis as secondary (for multi-instance)
+  try { await redis.setex(`otp:${phone}`, OTP_TTL, otp); } catch {}
 }
 
 async function getOTP(phone: string): Promise<string | null> {
+  // Check memory first (most reliable in single-instance dev)
+  const entry = memoryStore.get(phone);
+  if (entry) {
+    if (Date.now() > entry.expiresAt) { memoryStore.delete(phone); return null; }
+    return entry.otp;
+  }
+  // Fallback to Redis (for multi-instance prod)
   try {
     return await redis.get(`otp:${phone}`);
   } catch {
-    const entry = memoryStore.get(phone);
-    if (!entry || Date.now() > entry.expiresAt) return null;
-    return entry.otp;
+    return null;
   }
 }
 
 async function deleteOTP(phone: string): Promise<void> {
-  try { await redis.del(`otp:${phone}`); } catch {}
   memoryStore.delete(phone);
+  try { await redis.del(`otp:${phone}`); } catch {}
 }
 
 // Fallback in-memory store
