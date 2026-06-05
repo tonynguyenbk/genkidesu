@@ -7,6 +7,7 @@ import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { trpc } from '../../lib/trpc';
+import { useProfileTheme } from '../../hooks/useProfileTheme';
 
 type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
 
@@ -33,6 +34,7 @@ export default function CameraScreen() {
 
   const profiles = trpc.profile.list.useQuery(undefined, { retry: false });
   const scan = trpc.meal.scan.useMutation();
+  const { isBaby, isSenior, primaryColor } = useProfileTheme();
 
   const pickImage = useCallback(async (fromCamera: boolean) => {
     if (Platform.OS === 'web' || !fromCamera) {
@@ -100,9 +102,24 @@ export default function CameraScreen() {
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.title}>Ghi nhận bữa ăn</Text>
+          <Text style={[styles.title, isSenior && { fontSize: 28 }]}>Ghi nhận bữa ăn</Text>
           <Text style={styles.sub}>Chụp ảnh để AI phân tích dinh dưỡng</Text>
         </View>
+
+        {/* Baby feed shortcut */}
+        {isBaby && (
+          <TouchableOpacity
+            style={styles.babyBanner}
+            onPress={() => router.push('/baby-feed')}
+          >
+            <Text style={{ fontSize: 28 }}>🍼</Text>
+            <View style={{ flex: 1 }}>
+              <Text style={styles.babyBannerTitle}>Ghi nhận bữa ăn cho bé</Text>
+              <Text style={styles.babyBannerSub}>Sữa mẹ · Sữa công thức · Ăn dặm</Text>
+            </View>
+            <Ionicons name="chevron-forward" size={18} color="#DB2777" />
+          </TouchableOpacity>
+        )}
 
         {/* Meal type selector */}
         <View style={styles.mealTypeRow}>
@@ -282,4 +299,11 @@ const styles = StyleSheet.create({
   },
   tipsTitle: { fontSize: 14, fontWeight: '700', color: '#92400E', marginBottom: 8 },
   tipItem: { fontSize: 13, color: '#B45309', lineHeight: 22 },
+  babyBanner: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    backgroundColor: '#FFF5F9', borderRadius: 16, marginHorizontal: 16, marginBottom: 16,
+    padding: 16, borderWidth: 1.5, borderColor: '#F9A8D4',
+  },
+  babyBannerTitle: { fontSize: 15, fontWeight: '700', color: '#DB2777' },
+  babyBannerSub: { fontSize: 12, color: '#F472B6', marginTop: 2 },
 });
