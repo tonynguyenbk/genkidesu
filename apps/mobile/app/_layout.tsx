@@ -1,9 +1,8 @@
-import { Stack } from 'expo-router';
-import { Platform, View, StyleSheet } from 'react-native';
+import { Stack, usePathname } from 'expo-router';
+import { Platform, View, StyleSheet, useWindowDimensions } from 'react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { trpc, trpcClient } from '../lib/trpc';
 import { WebSidebar } from '../components/WebSidebar';
-import { usePathname } from 'expo-router';
 
 const queryClient = new QueryClient({
   defaultOptions: { queries: { retry: 1, staleTime: 30_000 } },
@@ -11,8 +10,11 @@ const queryClient = new QueryClient({
 
 function AppShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isAuth = pathname.includes('/(auth)') || pathname.includes('login') || pathname.includes('otp');
-  const showSidebar = Platform.OS === 'web' && !isAuth;
+  const { width } = useWindowDimensions();
+
+  const isAuthScreen = pathname.includes('login') || pathname.includes('otp');
+  // Show sidebar only on web AND wide screen (≥768px)
+  const showSidebar = Platform.OS === 'web' && width >= 768 && !isAuthScreen;
 
   if (showSidebar) {
     return (
