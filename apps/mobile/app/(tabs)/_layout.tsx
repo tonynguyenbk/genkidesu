@@ -1,5 +1,5 @@
 import { Tabs } from 'expo-router';
-import { Platform, View, StyleSheet } from 'react-native';
+import { Platform, View, StyleSheet, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
@@ -9,13 +9,17 @@ function TabIcon({ name, color, size }: { name: IoniconName; color: string; size
 }
 
 export default function TabsLayout() {
+  const { width } = useWindowDimensions();
+  // Hide tab bar on wide web (sidebar handles nav), show on mobile web (<768px)
+  const hideTabBar = Platform.OS === 'web' && width >= 768;
+
   return (
     <Tabs
       screenOptions={{
         tabBarActiveTintColor: '#2ECC71',
         tabBarInactiveTintColor: '#9CA3AF',
         headerShown: false,
-        tabBarStyle: Platform.OS === 'web'
+        tabBarStyle: hideTabBar
           ? { display: 'none' }
           : {
               backgroundColor: '#FFFFFF',
