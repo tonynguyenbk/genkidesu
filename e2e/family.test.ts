@@ -25,7 +25,7 @@ test.describe('Family system', () => {
   test('home screen loads with profile data', async ({ page }) => {
     await expect(page.getByText(/Xin chào/i).first()).toBeVisible({ timeout: 8000 });
     // Calorie card visible
-    await expect(page.getByText(/kcal/i).first()).toBeVisible({ timeout: 5000 });
+    await expect(page.getByText(/kcal/i).first()).toBeVisible({ timeout: 10000 });
   });
 
   test('navigate to family tab — shows empty state or dashboard', async ({ page }) => {

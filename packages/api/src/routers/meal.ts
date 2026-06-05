@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { protectedProcedure, router } from '../trpc.js';
 import { analyzeFoodImage } from '../ai/vision.js';
 
-const mealTypeSchema = z.enum(['breakfast', 'lunch', 'dinner', 'snack']);
+const mealTypeSchema = z.enum(['breakfast', 'lunch', 'dinner', 'snack', 'baby_meal', 'formula']);
 
 export const mealRouter = router({
   // Scan image → AI result (does NOT save yet — user must confirm)
