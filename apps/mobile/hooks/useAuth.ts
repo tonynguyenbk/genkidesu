@@ -1,55 +1,53 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { useRouter } from 'expo-router';
 
-const ACCESS_TOKEN_KEY = 'genki_access_token';
-const REFRESH_TOKEN_KEY = 'genki_refresh_token';
+const ACCESS_KEY = 'genki_access_token';
+const REFRESH_KEY = 'genki_refresh_token';
 
-function webStorage() {
-  return {
-    get: (key: string) => Promise.resolve(localStorage.getItem(key)),
-    set: (key: string, value: string) => {
-      localStorage.setItem(key, value);
-      return Promise.resolve();
-    },
-    delete: (key: string) => {
-      localStorage.removeItem(key);
-      return Promise.resolve();
-    },
-  };
-}
-
-const storage = Platform.OS === 'web' ? webStorage() : {
-  get: (key: string) => SecureStore.getItemAsync(key),
-  set: (key: string, value: string) => SecureStore.setItemAsync(key, value),
-  delete: (key: string) => SecureStore.deleteItemAsync(key),
-};
+const storage = Platform.OS === 'web'
+  ? {
+      get: (k: string) => Promise.resolve(localStorage.getItem(k)),
+      set: (k: string, v: string) => { localStorage.setItem(k, v); return Promise.resolve(); },
+      delete: (k: string) => { localStorage.removeItem(k); return Promise.resolve(); },
+    }
+  : {
+      get: (k: string) => SecureStore.getItemAsync(k),
+      set: (k: string, v: string) => SecureStore.setItemAsync(k, v),
+      delete: (k: string) => SecureStore.deleteItemAsync(k),
+    };
 
 export function useAuth() {
   const [token, setToken] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
-    storage.get(ACCESS_TOKEN_KEY).then((t) => setToken(t ?? null));
+    storage.get(ACCESS_KEY).then((t) => {
+      setToken(t ?? null);
+      setLoading(false);
+    });
   }, []);
 
-  const saveToken = async (accessToken: string, refreshToken: string) => {
+  const saveToken = useCallback(async (accessToken: string, refreshToken: string) => {
     await Promise.all([
-      storage.set(ACCESS_TOKEN_KEY, accessToken),
-      storage.set(REFRESH_TOKEN_KEY, refreshToken),
+      storage.set(ACCESS_KEY, accessToken),
+      storage.set(REFRESH_KEY, refreshToken),
     ]);
     setToken(accessToken);
-  };
+  }, []);
 
-  const logout = async () => {
+  const logout = useCallback(async () => {
     await Promise.all([
-      storage.delete(ACCESS_TOKEN_KEY),
-      storage.delete(REFRESH_TOKEN_KEY),
+      storage.delete(ACCESS_KEY),
+      storage.delete(REFRESH_KEY),
     ]);
     setToken(null);
     router.replace('/(auth)/login');
-  };
+  }, [router]);
 
-  return { token, saveToken, logout };
+  const getToken = useCallback(() => storage.get(ACCESS_KEY), []);
+
+  return { token, loading, saveToken, logout, getToken };
 }
