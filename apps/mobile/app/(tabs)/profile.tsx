@@ -1,7 +1,12 @@
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Platform } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Platform, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../hooks/useAuth';
+import { trpc } from '../../lib/trpc';
+
+const TYPE_COLORS: Record<string, string> = {
+  adult: '#2ECC71', senior: '#F59E0B', teen: '#8B5CF6', baby: '#EC4899',
+};
 
 function MenuItem({ icon, label, value, onPress, danger }: {
   icon: string; label: string; value?: string; onPress?: () => void; danger?: boolean;
@@ -20,37 +25,77 @@ function MenuItem({ icon, label, value, onPress, danger }: {
   );
 }
 
+function calcBMI(weightKg: number | null, heightCm: number | null): string {
+  if (!weightKg || !heightCm) return '–';
+  const bmi = weightKg / ((heightCm / 100) ** 2);
+  return bmi.toFixed(1);
+}
+
 export default function ProfileScreen() {
   const router = useRouter();
   const { logout } = useAuth();
+
+  const me = trpc.auth.me.useQuery(undefined, { retry: false });
+  const profiles = trpc.profile.list.useQuery(undefined, { retry: false });
+  const profile = profiles.data?.[0];
+
+  const color = TYPE_COLORS[profile?.type ?? 'adult'] ?? '#2ECC71';
+  const initial = profile?.name?.[0]?.toUpperCase() ?? 'G';
+  const tdee = profile?.tdeeKcal ? Math.round(profile.tdeeKcal) : null;
+  const bmi = calcBMI(profile?.weightKg ?? null, profile?.heightCm ?? null);
+  const goal = (profile?.nutritionTargets as any)?.calories;
+
+  const activityLabels = ['', 'Ít vận động', 'Vận động nhẹ', 'Vận động vừa', 'Vận động nhiều', 'Rất nhiều'];
+  const activityLabel = activityLabels[profile?.activityLevel ?? 2] ?? '';
+
+  const displayName = me.data?.email ?? me.data?.phone ?? '';
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Profile hero */}
         <View style={styles.hero}>
-          <View style={styles.avatarBig}>
-            <Text style={styles.avatarText}>M</Text>
-          </View>
-          <Text style={styles.name}>Nguyễn Văn Minh</Text>
-          <Text style={styles.email}>minh@example.com</Text>
-          <View style={styles.badgeRow}>
-            <View style={styles.badge}><Text style={styles.badgeText}>👑 Pro</Text></View>
-            <View style={[styles.badge, { backgroundColor: '#EFF6FF' }]}>
-              <Text style={[styles.badgeText, { color: '#3B82F6' }]}>🔥 7 ngày</Text>
-            </View>
-          </View>
+          {profiles.isLoading ? (
+            <ActivityIndicator color="#2ECC71" size="large" />
+          ) : (
+            <>
+              <View style={[styles.avatarBig, { backgroundColor: color }]}>
+                <Text style={styles.avatarText}>{initial}</Text>
+              </View>
+              <Text style={styles.name}>{profile?.name ?? 'Hồ sơ'}</Text>
+              {displayName ? <Text style={styles.email}>{displayName}</Text> : null}
+              <View style={styles.badgeRow}>
+                <View style={[styles.badge, { backgroundColor: color + '20' }]}>
+                  <Text style={[styles.badgeText, { color }]}>
+                    {profile?.type === 'adult' ? '👤 Người lớn'
+                      : profile?.type === 'senior' ? '👴 Cao tuổi'
+                      : profile?.type === 'teen' ? '🧑 Thiếu niên'
+                      : profile?.type === 'baby' ? '👶 Em bé'
+                      : '👤 Người lớn'}
+                  </Text>
+                </View>
+                {activityLabel && (
+                  <View style={styles.badge}>
+                    <Text style={styles.badgeText}>🏃 {activityLabel}</Text>
+                  </View>
+                )}
+              </View>
+            </>
+          )}
         </View>
 
-        {/* TDEE stats */}
+        {/* Stats */}
         <View style={styles.statsRow}>
           {[
-            { label: 'TDEE', value: '1,920', unit: 'kcal' },
-            { label: 'BMI', value: '22.4', unit: '' },
-            { label: 'Mục tiêu', value: 'Duy trì', unit: '' },
+            { label: 'TDEE', value: tdee ? tdee.toLocaleString() : '–', unit: 'kcal' },
+            { label: 'BMI', value: bmi, unit: '' },
+            { label: 'Mục tiêu', value: goal ? goal.toLocaleString() : '–', unit: 'kcal' },
           ].map((s) => (
             <View key={s.label} style={styles.statItem}>
-              <Text style={styles.statValue}>{s.value}<Text style={styles.statUnit}> {s.unit}</Text></Text>
+              <Text style={styles.statValue}>
+                {s.value}
+                {s.unit ? <Text style={styles.statUnit}> {s.unit}</Text> : null}
+              </Text>
               <Text style={styles.statLabel}>{s.label}</Text>
             </View>
           ))}
@@ -60,8 +105,18 @@ export default function ProfileScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Hồ sơ</Text>
           <View style={styles.menuCard}>
-            <MenuItem icon="person-outline" label="Thông tin cá nhân" onPress={() => {}} />
-            <MenuItem icon="fitness-outline" label="Mục tiêu dinh dưỡng" value="1,920 kcal" onPress={() => {}} />
+            <MenuItem
+              icon="person-outline"
+              label="Thông tin cá nhân"
+              value={profile?.weightKg ? `${profile.weightKg}kg` : undefined}
+              onPress={() => {}}
+            />
+            <MenuItem
+              icon="fitness-outline"
+              label="Mục tiêu dinh dưỡng"
+              value={goal ? `${goal.toLocaleString()} kcal` : undefined}
+              onPress={() => {}}
+            />
             <MenuItem icon="medical-outline" label="Bệnh lý & Chế độ ăn" onPress={() => {}} />
           </View>
         </View>
@@ -95,17 +150,17 @@ const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8FBF9' },
   hero: {
     alignItems: 'center', paddingTop: Platform.OS === 'web' ? 32 : 16,
-    paddingBottom: 24, paddingHorizontal: 20,
+    paddingBottom: 24, paddingHorizontal: 20, minHeight: 160,
   },
   avatarBig: {
     width: 84, height: 84, borderRadius: 42,
-    backgroundColor: '#2ECC71', justifyContent: 'center', alignItems: 'center',
-    marginBottom: 12, shadowColor: '#2ECC71', shadowOpacity: 0.3, shadowRadius: 12, elevation: 6,
+    justifyContent: 'center', alignItems: 'center',
+    marginBottom: 12, shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 12, elevation: 6,
   },
   avatarText: { fontSize: 32, fontWeight: '800', color: '#fff' },
   name: { fontSize: 20, fontWeight: '800', color: '#111827' },
   email: { fontSize: 13, color: '#9CA3AF', marginTop: 2 },
-  badgeRow: { flexDirection: 'row', gap: 8, marginTop: 12 },
+  badgeRow: { flexDirection: 'row', gap: 8, marginTop: 12, flexWrap: 'wrap', justifyContent: 'center' },
   badge: {
     paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20,
     backgroundColor: '#F0FDF4',
