@@ -3,6 +3,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../hooks/useAuth';
 import { trpc } from '../../lib/trpc';
+import { useNotifications } from '../../hooks/useNotifications';
 
 const TYPE_COLORS: Record<string, string> = {
   adult: '#2ECC71', senior: '#F59E0B', teen: '#8B5CF6', baby: '#EC4899',
@@ -38,6 +39,11 @@ export default function ProfileScreen() {
   const me = trpc.auth.me.useQuery(undefined, { retry: false });
   const profiles = trpc.profile.list.useQuery(undefined, { retry: false });
   const profile = profiles.data?.[0];
+  const subscription = trpc.subscription.getStatus.useQuery(undefined, { retry: false });
+  const { sendTestNotification, permission } = useNotifications();
+
+  const currentPlan = subscription.data?.plan ?? 'free';
+  const isFreePlan = currentPlan === 'free';
 
   const color = TYPE_COLORS[profile?.type ?? 'adult'] ?? '#2ECC71';
   const initial = profile?.name?.[0]?.toUpperCase() ?? 'G';
@@ -101,6 +107,19 @@ export default function ProfileScreen() {
           ))}
         </View>
 
+        {/* Upgrade banner (free plan only) */}
+        {isFreePlan && (
+          <TouchableOpacity style={styles.upgradeBanner} onPress={() => router.push('/paywall' as any)}>
+            <View>
+              <Text style={styles.upgradeTitle}>✨ Nâng cấp lên Pro</Text>
+              <Text style={styles.upgradeSub}>Không giới hạn ảnh · AI tư vấn · 15+ vi chất</Text>
+            </View>
+            <View style={styles.upgradeBtn}>
+              <Text style={styles.upgradeBtnText}>59k/tháng →</Text>
+            </View>
+          </TouchableOpacity>
+        )}
+
         {/* Menu sections */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Hồ sơ</Text>
@@ -124,9 +143,34 @@ export default function ProfileScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Cài đặt</Text>
           <View style={styles.menuCard}>
-            <MenuItem icon="notifications-outline" label="Thông báo" onPress={() => {}} />
+            <MenuItem
+              icon="notifications-outline"
+              label="Thông báo"
+              value={permission === 'granted' ? 'Bật' : 'Tắt'}
+              onPress={sendTestNotification}
+            />
             <MenuItem icon="shield-checkmark-outline" label="Quyền riêng tư" onPress={() => {}} />
             <MenuItem icon="language-outline" label="Ngôn ngữ" value="Tiếng Việt" onPress={() => {}} />
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Gói dịch vụ</Text>
+          <View style={styles.menuCard}>
+            <MenuItem
+              icon="flash-outline"
+              label="Gói hiện tại"
+              value={currentPlan === 'free' ? 'Miễn phí' : currentPlan === 'pro' ? 'Pro ✓' : 'Gia đình ✓'}
+              onPress={() => router.push('/paywall' as any)}
+            />
+            {isFreePlan && (
+              <MenuItem
+                icon="star-outline"
+                label="Nâng cấp Pro"
+                value="59.000đ/tháng"
+                onPress={() => router.push('/paywall' as any)}
+              />
+            )}
           </View>
         </View>
 
@@ -192,4 +236,15 @@ const styles = StyleSheet.create({
   menuIconDanger: { backgroundColor: '#FEF2F2' },
   menuLabel: { flex: 1, fontSize: 14, fontWeight: '500', color: '#111827' },
   menuValue: { fontSize: 13, color: '#9CA3AF' },
+  upgradeBanner: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    backgroundColor: '#F0FDF4', borderRadius: 16, marginHorizontal: 16, marginBottom: 16,
+    padding: 16, borderWidth: 1.5, borderColor: '#2ECC71',
+  },
+  upgradeTitle: { fontSize: 15, fontWeight: '700', color: '#065F46' },
+  upgradeSub: { fontSize: 12, color: '#059669', marginTop: 2 },
+  upgradeBtn: {
+    backgroundColor: '#2ECC71', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20,
+  },
+  upgradeBtnText: { fontSize: 13, fontWeight: '700', color: '#fff' },
 });
