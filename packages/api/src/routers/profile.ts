@@ -79,7 +79,8 @@ export const profileRouter = router({
         where: { id },
         data: {
           ...updateFields,
-          ...(uiPreferences ? { uiPreferences } : {}),
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          ...(uiPreferences ? { uiPreferences: uiPreferences as any } : {}),
         },
       });
 
