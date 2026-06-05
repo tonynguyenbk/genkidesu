@@ -53,6 +53,7 @@ export const familyRouter = router({
   getDashboard: protectedProcedure
     .input(z.object({ familyId: z.string().uuid() }))
     .query(async ({ input, ctx }) => {
+      const today = new Date(new Date().toDateString());
       const family = await ctx.prisma.family.findUnique({
         where: { id: input.familyId },
         include: {
@@ -61,8 +62,16 @@ export const familyRouter = router({
               profile: {
                 include: {
                   dailySummaries: {
-                    where: { summaryDate: new Date(new Date().toDateString()) },
+                    where: { summaryDate: today },
                     take: 1,
+                  },
+                  mealLogs: {
+                    where: {
+                      loggedAt: { gte: today },
+                      userConfirmed: true,
+                    },
+                    select: { id: true, mealType: true, loggedAt: true },
+                    orderBy: { loggedAt: 'asc' },
                   },
                 },
               },
@@ -72,6 +81,120 @@ export const familyRouter = router({
       });
       if (!family) throw new TRPCError({ code: 'NOT_FOUND' });
       return family;
+    }),
+
+  getAlerts: protectedProcedure
+    .input(z.object({ familyId: z.string().uuid() }))
+    .query(async ({ input, ctx }) => {
+      const today = new Date(new Date().toDateString());
+      const threeDaysAgo = new Date(today.getTime() - 3 * 24 * 60 * 60 * 1000);
+
+      const family = await ctx.prisma.family.findUnique({
+        where: { id: input.familyId },
+        include: {
+          members: {
+            include: {
+              profile: {
+                include: {
+                  dailySummaries: {
+                    where: { summaryDate: { gte: threeDaysAgo } },
+                    orderBy: { summaryDate: 'desc' },
+                    take: 3,
+                  },
+                },
+              },
+            },
+          },
+        },
+      });
+      if (!family) throw new TRPCError({ code: 'NOT_FOUND' });
+
+      const alerts: Array<{
+        profileId: string;
+        profileName: string;
+        type: string;
+        message: string;
+        severity: 'info' | 'warning' | 'danger';
+      }> = [];
+
+      for (const member of family.members) {
+        const { profile, privacySettings } = member;
+        const privacy = privacySettings as Record<string, unknown>;
+        if (privacy?.show_details_to_family === false) continue;
+
+        const todaySummary = profile.dailySummaries.find(
+          (s) => s.summaryDate.toDateString() === today.toDateString(),
+        );
+        const calorieGoal =
+          (profile.nutritionTargets as Record<string, number> | null)?.calories ??
+          profile.tdeeKcal ?? 1800;
+        const proteinGoal =
+          (profile.nutritionTargets as Record<string, number> | null)?.protein_g ?? 60;
+
+        // No meals logged today
+        if (!todaySummary || todaySummary.mealCount === 0) {
+          alerts.push({
+            profileId: profile.id,
+            profileName: profile.name,
+            type: 'missing_meals',
+            message: `${profile.name} chưa ghi nhận bữa ăn nào hôm nay`,
+            severity: 'warning',
+          });
+          continue;
+        }
+
+        // Below 50% calorie goal
+        if (todaySummary.totalCalories < calorieGoal * 0.5) {
+          alerts.push({
+            profileId: profile.id,
+            profileName: profile.name,
+            type: 'low_calories',
+            message: `${profile.name} mới đạt ${Math.round((todaySummary.totalCalories / calorieGoal) * 100)}% mục tiêu calo`,
+            severity: 'warning',
+          });
+        }
+
+        // Low protein
+        if (todaySummary.totalProteinG < proteinGoal * 0.6) {
+          alerts.push({
+            profileId: profile.id,
+            profileName: profile.name,
+            type: 'low_protein',
+            message: `${profile.name} thiếu protein hôm nay (${Math.round(todaySummary.totalProteinG)}g/${Math.round(proteinGoal)}g)`,
+            severity: 'info',
+          });
+        }
+
+        // 3-day streak low calories
+        const allLow = profile.dailySummaries
+          .slice(0, 3)
+          .every((s) => s.totalCalories < calorieGoal * 0.7);
+        if (profile.dailySummaries.length === 3 && allLow) {
+          alerts.push({
+            profileId: profile.id,
+            profileName: profile.name,
+            type: 'streak_low',
+            message: `${profile.name} ăn dưới mục tiêu 3 ngày liên tiếp`,
+            severity: 'danger',
+          });
+        }
+
+        // Great day (90-110% of goal)
+        if (
+          todaySummary.totalCalories >= calorieGoal * 0.9 &&
+          todaySummary.totalCalories <= calorieGoal * 1.1
+        ) {
+          alerts.push({
+            profileId: profile.id,
+            profileName: profile.name,
+            type: 'great_day',
+            message: `${profile.name} đạt mục tiêu dinh dưỡng hôm nay! 🎉`,
+            severity: 'info',
+          });
+        }
+      }
+
+      return { alerts };
     }),
 
   regenerateInvite: protectedProcedure
