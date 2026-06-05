@@ -54,10 +54,12 @@ export const authRouter = router({
 
       if (process.env['NODE_ENV'] === 'development') {
         console.log(`[DEV] OTP for ${input.phone}: ${otp}`);
+        // Return OTP in dev mode so client can display it
+        return { success: true, expiresIn: 300, devOtp: otp };
       }
       // Production: send via Twilio
 
-      return { success: true, expiresIn: 300 };
+      return { success: true, expiresIn: 300, devOtp: undefined };
     }),
 
   verifyOTP: publicProcedure
