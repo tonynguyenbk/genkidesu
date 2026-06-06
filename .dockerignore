@@ -1,0 +1,10 @@
+node_modules
+.git
+.env
+*.log
+apps/mobile
+test-results
+e2e
+docs
+**/dist
+**/.turbo
