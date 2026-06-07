@@ -89,6 +89,7 @@ model Profile {
   mealLogs         MealLog[]
   dailySummaries   DailySummary[]
   activityLogs     ActivityLog[]
+  growthMeasurements GrowthMeasurement[]
 
   @@index([userId])
   @@index([type])
@@ -158,6 +159,27 @@ model HealthCondition {
 
   @@index([profileId])
   @@map("health_conditions")
+}
+
+// ==========================================
+// GROWTH TRACKING (baby/teen — biểu đồ tăng trưởng theo chuẩn WHO)
+// ==========================================
+
+model GrowthMeasurement {
+  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  profileId            String   @map("profile_id") @db.Uuid
+  measuredAt           DateTime @map("measured_at") @db.Date
+  ageMonths            Float    @map("age_months")
+  heightCm             Float?   @map("height_cm")
+  weightKg             Float?   @map("weight_kg")
+  headCircumferenceCm  Float?   @map("head_circumference_cm")
+  notes                String?  @db.Text
+  createdAt            DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  profile Profile @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([profileId, measuredAt])
+  @@map("growth_measurements")
 }
 
 // ==========================================
