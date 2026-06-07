@@ -2,6 +2,7 @@
   "expo": {
     "name": "Genki",
     "slug": "genki",
+    "owner": "tonynguyenbk",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -11,7 +12,11 @@
       "resizeMode": "contain",
       "backgroundColor": "#2ECC71"
     },
-    "platforms": ["ios", "android", "web"],
+    "platforms": [
+      "ios",
+      "android",
+      "web"
+    ],
     "web": {
       "bundler": "metro",
       "output": "single",
@@ -26,7 +31,11 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#2ECC71"
       },
-      "package": "com.genki.app"
+      "package": "com.genki.app",
+      "permissions": [
+        "android.permission.CAMERA",
+        "android.permission.RECORD_AUDIO"
+      ]
     },
     "plugins": [
       "expo-router",
@@ -42,11 +51,26 @@
         {
           "photosPermission": "Genki cần quyền truy cập thư viện ảnh"
         }
-      ]
+      ],
+      "expo-asset"
     ],
     "scheme": "genki",
     "experiments": {
       "typedRoutes": true
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "a07e9f89-9ae8-402e-ad67-cb2725f2057f"
+      }
+    },
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/a07e9f89-9ae8-402e-ad67-cb2725f2057f"
     }
   }
 }
