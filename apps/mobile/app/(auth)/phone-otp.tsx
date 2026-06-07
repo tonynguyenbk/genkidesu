@@ -4,7 +4,7 @@ import {
   SafeAreaView, KeyboardAvoidingView, Platform, ActivityIndicator, Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { trpc } from '../../lib/trpc';
 import { useAuth } from '../../hooks/useAuth';
 

@@ -4,7 +4,7 @@ import {
   TouchableOpacity, TextInput, ActivityIndicator, Alert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { trpc, queryClient } from '../lib/trpc';
 
 type FeedType = 'breast_milk' | 'formula' | 'solid';

@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, SafeAreaView, Platform, ActivityIndicator, Alert } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { trpc } from '../../lib/trpc';
 import { useAuth } from '../../hooks/useAuth';
 import { useGoogleAuthRequest, useFacebookAuthRequest, isGoogleConfigured, isFacebookConfigured } from '../../lib/oauth';

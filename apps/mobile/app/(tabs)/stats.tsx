@@ -1,5 +1,5 @@
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, Platform, ActivityIndicator } from 'react-native';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { trpc } from '../../lib/trpc';
 
 function WeekBar({ day, pct, active, cal }: { day: string; pct: number; active: boolean; cal: number }) {
