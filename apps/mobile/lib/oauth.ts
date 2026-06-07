@@ -22,6 +22,7 @@ export function useGoogleAuthRequest() {
       scopes: ['openid', 'profile', 'email'],
       redirectUri,
       responseType: AuthSession.ResponseType.IdToken,
+      usePKCE: false,
       extraParams: { nonce: Math.random().toString(36).slice(2) },
     },
     googleDiscovery,
@@ -36,6 +37,7 @@ export function useFacebookAuthRequest() {
       scopes: ['public_profile', 'email'],
       redirectUri,
       responseType: AuthSession.ResponseType.Token,
+      usePKCE: false,
     },
     facebookDiscovery,
   );
