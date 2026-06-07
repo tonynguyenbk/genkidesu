@@ -4,7 +4,7 @@ import {
   SafeAreaView, ScrollView, Alert, ActivityIndicator, Platform,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Ionicons } from '@expo/vector-icons';
 import { trpc } from '../../lib/trpc';
 
 type ProfileType = 'adult' | 'baby' | 'teen' | 'senior';

@@ -1,6 +1,6 @@
 import { Tabs } from 'expo-router';
 import { Platform, View, StyleSheet, useWindowDimensions } from 'react-native';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Ionicons } from '@expo/vector-icons';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 

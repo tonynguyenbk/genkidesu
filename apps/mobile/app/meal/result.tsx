@@ -4,7 +4,7 @@ import {
   TouchableOpacity, TextInput, Alert, ActivityIndicator, Image, Platform,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Ionicons } from '@expo/vector-icons';
 import { trpc, queryClient } from '../../lib/trpc';
 import type { VisionResult, DetectedDish } from '@genki/api';
 
