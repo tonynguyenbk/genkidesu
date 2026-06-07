@@ -4,7 +4,7 @@ import {
   TouchableOpacity, Platform, ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { trpc } from '../../lib/trpc';
 

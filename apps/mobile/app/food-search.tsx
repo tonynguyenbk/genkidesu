@@ -4,7 +4,7 @@ import {
   StyleSheet, SafeAreaView, ActivityIndicator, Platform,
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
-import Ionicons from '@expo/vector-icons/Ionicons';
+import { Ionicons } from '@expo/vector-icons';
 import { trpc } from '../lib/trpc';
 
 interface FoodItem {
