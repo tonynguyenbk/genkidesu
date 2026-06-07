@@ -72,12 +72,13 @@ export const authRouter = router({
     .mutation(async ({ input }) => {
       const otp = generateOTP();
       await storeOTP(input.phone, otp);
-      const isDev = process.env['NODE_ENV'] !== 'production';
-      console.log(`[OTP] ${input.phone}: ${otp} (isDev=${isDev})`);
+      const smsEnabled = !!process.env['TWILIO_ACCOUNT_SID'];
+      console.log(`[OTP] ${input.phone}: ${otp} (sms=${smsEnabled})`);
       return {
         success: true,
         expiresIn: OTP_TTL,
-        devOtp: isDev ? otp : null,
+        // Return OTP directly until Twilio is configured
+        devOtp: smsEnabled ? null : otp,
       };
     }),
 
