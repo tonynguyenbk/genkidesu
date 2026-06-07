@@ -40,6 +40,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Build workspace packages
+        run: pnpm --filter @genki/shared build
+
       - name: Build web app
         run: pnpm --filter @genki/mobile build:web
         env:
