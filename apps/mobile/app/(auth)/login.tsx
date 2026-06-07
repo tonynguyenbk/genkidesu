@@ -126,7 +126,7 @@ export default function LoginScreen() {
 
           <TouchableOpacity
             style={[styles.btn, styles.btnPhone]}
-            onPress={() => router.push('/(auth)/phone-otp')}
+            onPress={() => saveToken('stub-access-token', 'stub-refresh-token').then(() => router.replace('/(tabs)'))}
           >
             <View style={styles.btnInner}>
               <Ionicons name="phone-portrait-outline" size={20} color="#2ECC71" />
