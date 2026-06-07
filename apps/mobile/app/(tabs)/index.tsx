@@ -3,7 +3,7 @@ import {
   TouchableOpacity, Platform, ActivityIndicator,
 } from 'react-native';
 import { useRouter } from 'expo-router';
-import { Ionicons } from '@expo/vector-icons';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { trpc } from '../../lib/trpc';
 import { ProfileSwitcher } from '../../components/ProfileSwitcher';
 import { useProfileTheme } from '../../hooks/useProfileTheme';
@@ -86,7 +86,8 @@ function TeenStreakBanner({ streak, calories, goal }: {
 }
 
 // Baby: feeding summary card
-function BabyFeedingCard({ logs }: { logs: any[] }) {
+function BabyFeedingCard({ logs, profileId }: { logs: any[]; profileId?: string }) {
+  const router = useRouter();
   const feedings = logs ?? [];
   const totalMl = feedings
     .filter((l) => l.mealType === 'formula' || l.mealType === 'baby_meal')
@@ -114,6 +115,16 @@ function BabyFeedingCard({ logs }: { logs: any[] }) {
           <Text style={styles.babyStatLabel}>kcal</Text>
         </View>
       </View>
+      {profileId && (
+        <TouchableOpacity
+          style={styles.growthLink}
+          onPress={() => router.push({ pathname: '/growth-chart', params: { profileId } })}
+        >
+          <Ionicons name="trending-up" size={16} color="#EC4899" />
+          <Text style={styles.growthLinkText}>Biểu đồ tăng trưởng (chuẩn WHO)</Text>
+          <Ionicons name="chevron-forward" size={16} color="#EC4899" />
+        </TouchableOpacity>
+      )}
     </View>
   );
 }
@@ -197,7 +208,7 @@ export default function HomeScreen() {
         ) : isSenior ? (
           <SeniorCalorieCard eaten={eaten} goal={caloriesGoal} remaining={remaining} />
         ) : isBaby ? (
-          <BabyFeedingCard logs={mealLogs.data ?? []} />
+          <BabyFeedingCard logs={mealLogs.data ?? []} profileId={profile?.id} />
         ) : (
           <View style={styles.card}>
             <View style={styles.ringRow}>
@@ -367,6 +378,11 @@ const styles = StyleSheet.create({
   babyStatItem: { flex: 1, alignItems: 'center' },
   babyStatVal: { fontSize: 24, fontWeight: '800', color: '#EC4899' },
   babyStatLabel: { fontSize: 11, color: '#9CA3AF', marginTop: 2 },
+  growthLink: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+    marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: '#FCE7F3',
+  },
+  growthLinkText: { fontSize: 13, fontWeight: '600', color: '#EC4899' },
 
   // Standard calorie ring card
   ringRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },

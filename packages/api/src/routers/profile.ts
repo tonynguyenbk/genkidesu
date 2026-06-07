@@ -1,5 +1,6 @@
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
+import { assessGrowth, getAgeMonthsFromBirthDate } from '@genki/shared';
 import { protectedProcedure, router } from '../trpc.js';
 import { calculateTDEE, getDefaultNutritionTargets, getDefaultUiPreferences } from '../services/tdee.js';
 
@@ -116,5 +117,87 @@ export const profileRouter = router({
       if (!profile) throw new TRPCError({ code: 'NOT_FOUND' });
       const tdee = calculateTDEE(profile);
       return { tdee, profile };
+    }),
+
+  // Ghi nhận số đo tăng trưởng (chiều cao/cân nặng) — dùng cho hồ sơ em bé
+  addGrowthMeasurement: protectedProcedure
+    .input(z.object({
+      profileId: z.string().uuid(),
+      measuredAt: z.string().datetime(),
+      heightCm: z.number().min(20).max(150).optional(),
+      weightKg: z.number().min(0.5).max(60).optional(),
+      headCircumferenceCm: z.number().min(20).max(70).optional(),
+      notes: z.string().max(500).optional(),
+    }))
+    .mutation(async ({ input, ctx }) => {
+      const profile = await ctx.prisma.profile.findFirst({
+        where: { id: input.profileId, userId: ctx.userId },
+      });
+      if (!profile) throw new TRPCError({ code: 'NOT_FOUND' });
+      if (!profile.birthDate) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Hồ sơ chưa có ngày sinh — không thể tính tuổi' });
+      }
+      if (!input.heightCm && !input.weightKg && !input.headCircumferenceCm) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Cần nhập ít nhất 1 chỉ số' });
+      }
+
+      const measuredAt = new Date(input.measuredAt);
+      const ageMonths = getAgeMonthsFromBirthDate(new Date(profile.birthDate), measuredAt);
+
+      const measurement = await ctx.prisma.growthMeasurement.create({
+        data: {
+          profileId: input.profileId,
+          measuredAt,
+          ageMonths,
+          heightCm: input.heightCm,
+          weightKg: input.weightKg,
+          headCircumferenceCm: input.headCircumferenceCm,
+          notes: input.notes,
+        },
+      });
+
+      // Đồng bộ chiều cao/cân nặng mới nhất vào hồ sơ
+      if (input.heightCm || input.weightKg) {
+        await ctx.prisma.profile.update({
+          where: { id: input.profileId },
+          data: {
+            ...(input.heightCm ? { heightCm: input.heightCm } : {}),
+            ...(input.weightKg ? { weightKg: input.weightKg } : {}),
+          },
+        });
+      }
+
+      return measurement;
+    }),
+
+  // Lịch sử tăng trưởng + đánh giá z-score theo chuẩn WHO (0-24 tháng)
+  getGrowthHistory: protectedProcedure
+    .input(z.object({ profileId: z.string().uuid() }))
+    .query(async ({ input, ctx }) => {
+      const profile = await ctx.prisma.profile.findFirst({
+        where: { id: input.profileId, userId: ctx.userId },
+      });
+      if (!profile) throw new TRPCError({ code: 'NOT_FOUND' });
+
+      const measurements = await ctx.prisma.growthMeasurement.findMany({
+        where: { profileId: input.profileId },
+        orderBy: { measuredAt: 'asc' },
+      });
+
+      const gender = profile.gender ?? 'male';
+      const records = measurements.map((m) => ({
+        ...m,
+        weightAssessment:
+          m.weightKg != null ? assessGrowth('weight', gender, m.ageMonths, m.weightKg) : null,
+        heightAssessment:
+          m.heightCm != null ? assessGrowth('height', gender, m.ageMonths, m.heightCm) : null,
+      }));
+
+      return {
+        gender,
+        birthDate: profile.birthDate,
+        records,
+        latest: records.at(-1) ?? null,
+      };
     }),
 });
