@@ -50,18 +50,75 @@ async function deleteOTP(phone: string): Promise<void> {
 // Fallback in-memory store
 const memoryStore = new Map<string, { otp: string; expiresAt: number }>();
 
+interface GoogleTokenPayload {
+  aud: string;
+  sub: string;
+  email?: string;
+  email_verified?: string;
+  name?: string;
+  picture?: string;
+}
+
+async function verifyGoogleIdToken(idToken: string): Promise<GoogleTokenPayload> {
+  const res = await fetch(
+    `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`,
+  );
+  if (!res.ok) {
+    throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Google token không hợp lệ' });
+  }
+  const payload = (await res.json()) as GoogleTokenPayload;
+  const clientId = process.env['GOOGLE_CLIENT_ID'];
+  if (clientId && payload.aud !== clientId) {
+    throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Google token không thuộc ứng dụng này' });
+  }
+  return payload;
+}
+
+interface FacebookProfile {
+  id: string;
+  name?: string;
+  email?: string;
+  error?: { message?: string };
+}
+
+async function verifyFacebookAccessToken(accessToken: string): Promise<FacebookProfile> {
+  const res = await fetch(
+    `https://graph.facebook.com/me?fields=id,name,email&access_token=${encodeURIComponent(accessToken)}`,
+  );
+  const payload = (await res.json()) as FacebookProfile;
+  if (!res.ok || payload.error || !payload.id) {
+    throw new TRPCError({ code: 'UNAUTHORIZED', message: 'Facebook token không hợp lệ' });
+  }
+  return payload;
+}
+
 export const authRouter = router({
   loginWithGoogle: publicProcedure
     .input(z.object({ idToken: z.string().min(1) }))
     .mutation(async ({ input, ctx }) => {
-      if (process.env['NODE_ENV'] !== 'development') {
-        throw new TRPCError({ code: 'NOT_IMPLEMENTED', message: 'Configure Google OAuth' });
+      const profile = await verifyGoogleIdToken(input.idToken);
+      if (!profile.email) {
+        throw new TRPCError({ code: 'BAD_REQUEST', message: 'Tài khoản Google không có email' });
       }
-      const email = `dev-google-${Date.now()}@test.com`;
+      const user = await ctx.prisma.user.upsert({
+        where: { email: profile.email },
+        update: { lastLoginAt: new Date() },
+        create: { email: profile.email, authProvider: 'google', isActive: true },
+      });
+      await ensureDefaultProfile(user.id, ctx.prisma);
+      return createSession(user.id, ctx.prisma);
+    }),
+
+  loginWithFacebook: publicProcedure
+    .input(z.object({ accessToken: z.string().min(1) }))
+    .mutation(async ({ input, ctx }) => {
+      const profile = await verifyFacebookAccessToken(input.accessToken);
+      // Facebook accounts don't always expose an email — derive a stable fallback from the FB id
+      const email = profile.email ?? `fb-${profile.id}@facebook.genki.local`;
       const user = await ctx.prisma.user.upsert({
         where: { email },
         update: { lastLoginAt: new Date() },
-        create: { email, authProvider: 'google', isActive: true },
+        create: { email, authProvider: 'facebook', isActive: true },
       });
       await ensureDefaultProfile(user.id, ctx.prisma);
       return createSession(user.id, ctx.prisma);
