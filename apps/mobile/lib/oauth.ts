@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import * as AuthSession from 'expo-auth-session';
 import * as WebBrowser from 'expo-web-browser';
 
@@ -16,6 +17,11 @@ const facebookDiscovery: AuthSession.DiscoveryDocument = {
 
 export function useGoogleAuthRequest() {
   const redirectUri = AuthSession.makeRedirectUri();
+  // `extraParams` must keep a stable object identity across renders — expo-auth-session's
+  // useAuthRequest re-derives the request whenever it changes, and a fresh nonce on every
+  // render created a render -> rebuild -> setState -> render loop that froze the page.
+  const nonce = useMemo(() => Math.random().toString(36).slice(2), []);
+  const extraParams = useMemo(() => ({ nonce }), [nonce]);
   return AuthSession.useAuthRequest(
     {
       clientId: GOOGLE_CLIENT_ID,
@@ -23,7 +29,7 @@ export function useGoogleAuthRequest() {
       redirectUri,
       responseType: AuthSession.ResponseType.IdToken,
       usePKCE: false,
-      extraParams: { nonce: Math.random().toString(36).slice(2) },
+      extraParams,
     },
     googleDiscovery,
   );

@@ -48,7 +48,10 @@ export default function PhoneOTPScreen() {
 
   return (
     <SafeAreaView style={styles.container}>
-      <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
+      <KeyboardAvoidingView
+        behavior={Platform.OS === 'ios' ? 'padding' : Platform.OS === 'android' ? 'height' : undefined}
+        style={{ flex: 1 }}
+      >
 
         <TouchableOpacity
           onPress={() => step === 'otp' ? setStep('phone') : router.back()}
