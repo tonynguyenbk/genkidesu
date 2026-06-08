@@ -32,7 +32,7 @@ export const profileRouter = router({
         heightCm: input.heightCm,
         weightKg: input.weightKg,
         activityLevel: input.activityLevel ?? 2,
-        uiPreferences: getDefaultUiPreferences(input.type),
+        uiPreferences: getDefaultUiPreferences(input.type, input.birthDate),
       };
 
       const tempProfile = {
@@ -44,7 +44,7 @@ export const profileRouter = router({
       };
 
       const tdee = calculateTDEE(tempProfile);
-      const nutritionTargets = getDefaultNutritionTargets(input.type, tdee);
+      const nutritionTargets = getDefaultNutritionTargets(input.type, tdee, input.birthDate);
 
       const profile = await ctx.prisma.profile.create({
         data: { ...profileData, tdeeKcal: tdee, nutritionTargets },
@@ -90,7 +90,7 @@ export const profileRouter = router({
         if (tdee) {
           return ctx.prisma.profile.update({
             where: { id },
-            data: { tdeeKcal: tdee, nutritionTargets: getDefaultNutritionTargets(updated.type, tdee) },
+            data: { tdeeKcal: tdee, nutritionTargets: getDefaultNutritionTargets(updated.type, tdee, updated.birthDate) },
           });
         }
       }

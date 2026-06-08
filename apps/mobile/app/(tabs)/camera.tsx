@@ -34,7 +34,7 @@ export default function CameraScreen() {
 
   const profiles = trpc.profile.list.useQuery(undefined, { retry: false });
   const scan = trpc.meal.scan.useMutation();
-  const { isBaby, isSenior, primaryColor } = useProfileTheme();
+  const { isBaby, isSenior, primaryColor, buttonHeight } = useProfileTheme();
 
   const pickImage = useCallback(async (fromCamera: boolean) => {
     if (Platform.OS === 'web' || !fromCamera) {
@@ -153,19 +153,27 @@ export default function CameraScreen() {
             <Text style={styles.uploadTitle}>Chụp ảnh bữa ăn</Text>
             <Text style={styles.uploadSub}>AI sẽ nhận diện món ăn và tính dinh dưỡng tự động</Text>
 
-            <View style={styles.uploadButtons}>
+            <View style={[styles.uploadButtons, isSenior && styles.uploadButtonsSenior]}>
               {Platform.OS !== 'web' && (
-                <TouchableOpacity style={styles.uploadBtn} onPress={() => pickImage(true)}>
-                  <Ionicons name="camera-outline" size={22} color="#2ECC71" />
-                  <Text style={styles.uploadBtnText}>Mở camera</Text>
+                <TouchableOpacity
+                  style={[styles.uploadBtn, { minHeight: buttonHeight }, isSenior && styles.uploadBtnSenior]}
+                  onPress={() => pickImage(true)}
+                >
+                  <Ionicons name="camera-outline" size={isSenior ? 28 : 22} color="#2ECC71" />
+                  <Text style={[styles.uploadBtnText, isSenior && styles.uploadBtnTextSenior]}>Mở camera</Text>
                 </TouchableOpacity>
               )}
               <TouchableOpacity
-                style={[styles.uploadBtn, Platform.OS === 'web' && styles.uploadBtnFull]}
+                style={[
+                  styles.uploadBtn,
+                  { minHeight: buttonHeight },
+                  Platform.OS === 'web' && styles.uploadBtnFull,
+                  isSenior && styles.uploadBtnSenior,
+                ]}
                 onPress={() => pickImage(false)}
               >
-                <Ionicons name="image-outline" size={22} color="#2ECC71" />
-                <Text style={styles.uploadBtnText}>
+                <Ionicons name="image-outline" size={isSenior ? 28 : 22} color="#2ECC71" />
+                <Text style={[styles.uploadBtnText, isSenior && styles.uploadBtnTextSenior]}>
                   {Platform.OS === 'web' ? 'Chọn ảnh từ máy tính' : 'Chọn từ thư viện'}
                 </Text>
               </TouchableOpacity>
@@ -176,19 +184,24 @@ export default function CameraScreen() {
         {/* Scan button */}
         {imageUri && (
           <TouchableOpacity
-            style={[styles.scanBtn, scanning && styles.scanBtnLoading]}
+            style={[
+              styles.scanBtn,
+              { minHeight: buttonHeight },
+              scanning && styles.scanBtnLoading,
+              isSenior && styles.scanBtnSenior,
+            ]}
             onPress={handleScan}
             disabled={scanning}
           >
             {scanning ? (
               <View style={styles.scanBtnInner}>
                 <ActivityIndicator color="#fff" size="small" />
-                <Text style={styles.scanBtnText}>AI đang phân tích...</Text>
+                <Text style={[styles.scanBtnText, isSenior && styles.scanBtnTextSenior]}>AI đang phân tích...</Text>
               </View>
             ) : (
               <View style={styles.scanBtnInner}>
-                <Ionicons name="scan" size={22} color="#fff" />
-                <Text style={styles.scanBtnText}>Phân tích bữa ăn</Text>
+                <Ionicons name="scan" size={isSenior ? 26 : 22} color="#fff" />
+                <Text style={[styles.scanBtnText, isSenior && styles.scanBtnTextSenior]}>Phân tích bữa ăn</Text>
               </View>
             )}
           </TouchableOpacity>
@@ -263,13 +276,16 @@ const styles = StyleSheet.create({
   uploadTitle: { fontSize: 18, fontWeight: '700', color: '#111827', marginBottom: 6 },
   uploadSub: { fontSize: 13, color: '#9CA3AF', textAlign: 'center', marginBottom: 24, lineHeight: 20 },
   uploadButtons: { flexDirection: 'row', gap: 10, width: '100%' },
+  uploadButtonsSenior: { flexDirection: 'column' },
   uploadBtn: {
     flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
     paddingVertical: 13, borderRadius: 12, borderWidth: 1.5, borderColor: '#2ECC71',
     backgroundColor: '#F0FDF4',
   },
   uploadBtnFull: { flex: 1 },
+  uploadBtnSenior: { borderRadius: 16, borderWidth: 2 },
   uploadBtnText: { fontSize: 13, fontWeight: '600', color: '#2ECC71' },
+  uploadBtnTextSenior: { fontSize: 17 },
 
   imageContainer: { marginHorizontal: 16, borderRadius: 20, overflow: 'hidden', position: 'relative' },
   previewImage: { width: '100%', height: 260 },
@@ -284,8 +300,10 @@ const styles = StyleSheet.create({
     shadowColor: '#2ECC71', shadowOpacity: 0.35, shadowRadius: 10, elevation: 5,
   },
   scanBtnLoading: { backgroundColor: '#6EE7A0' },
+  scanBtnSenior: { borderRadius: 18, padding: 19 },
   scanBtnInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
   scanBtnText: { fontSize: 17, fontWeight: '700', color: '#fff' },
+  scanBtnTextSenior: { fontSize: 19 },
 
   manualBtn: {
     flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
