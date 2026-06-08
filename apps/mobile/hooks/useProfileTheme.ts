@@ -1,14 +1,10 @@
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-import { trpc } from '../lib/trpc';
+import { useActiveProfile } from './useActiveProfile';
 
 export type PersonaType = 'adult' | 'baby' | 'teen' | 'senior';
 
-const PERSONA_COLORS: Record<PersonaType, string> = {
-  adult:  '#2ECC71',
-  teen:   '#8B5CF6',
-  senior: '#F59E0B',
-  baby:   '#EC4899',
-};
+// One brand color across all profiles — accent color is a style choice,
+// not an accessibility need, so we keep a single unified look for everyone.
+const BRAND_COLOR = '#2ECC71';
 
 const PERSONA_FONT_SCALE: Record<PersonaType, number> = {
   adult:  1.0,
@@ -17,17 +13,27 @@ const PERSONA_FONT_SCALE: Record<PersonaType, number> = {
   baby:   1.0,
 };
 
+// Minimum tappable button height per persona — senior uses 56px per
+// accessibility guidance (large touch targets for reduced dexterity).
+const PERSONA_BUTTON_HEIGHT: Record<PersonaType, number> = {
+  adult:  48,
+  teen:   48,
+  senior: 56,
+  baby:   48,
+};
+
 export function useProfileTheme() {
-  const profiles = trpc.profile.list.useQuery(undefined, { retry: false, staleTime: 60_000 });
-  // Cast to any to avoid TS2589 on deep Prisma type inference
-  const first = (profiles.data as any)?.[0] ?? null;
-  const profileType = (first?.type ?? 'adult') as PersonaType;
-  const uiPrefs = (first?.uiPreferences ?? null) as Record<string, unknown> | null;
+  const { activeProfile } = useActiveProfile();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const active = activeProfile as any;
+  const profileType = (active?.type ?? 'adult') as PersonaType;
+  const uiPrefs = (active?.uiPreferences ?? null) as Record<string, unknown> | null;
 
   return {
     profileType,
-    primaryColor: PERSONA_COLORS[profileType],
+    primaryColor: BRAND_COLOR,
     fontScale: PERSONA_FONT_SCALE[profileType],
+    buttonHeight: PERSONA_BUTTON_HEIGHT[profileType],
     isSenior: profileType === 'senior',
     isBaby: profileType === 'baby',
     isTeen: profileType === 'teen',

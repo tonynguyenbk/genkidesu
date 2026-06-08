@@ -7,8 +7,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { trpc } from '../../lib/trpc';
 import { ProfileSwitcher } from '../../components/ProfileSwitcher';
 import { useProfileTheme } from '../../hooks/useProfileTheme';
+import { useActiveProfile } from '../../hooks/useActiveProfile';
 
 const TODAY = new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'numeric' });
+// Computed once at module load — recomputing per render would change the
+// tRPC query key every time and trigger an infinite refetch loop.
+const TODAY_ISO = new Date().toISOString();
 
 const MEAL_CONFIG = [
   { type: 'breakfast', label: 'Bữa sáng', icon: '🌅' },
@@ -133,18 +137,17 @@ function BabyFeedingCard({ logs, profileId }: { logs: any[]; profileId?: string 
 
 export default function HomeScreen() {
   const router = useRouter();
-  const { isSenior, isBaby, isTeen, primaryColor, fontScale, simplifiedMode } = useProfileTheme();
+  const { isSenior, isBaby, isTeen, primaryColor, fontScale, simplifiedMode, buttonHeight } = useProfileTheme();
 
-  const profiles = trpc.profile.list.useQuery(undefined, { retry: false });
-  const profile = profiles.data?.[0];
+  const { activeProfile: profile, isLoading: profileLoading } = useActiveProfile();
 
   const summary = trpc.meal.getDailySummary.useQuery(
-    { profileId: profile?.id ?? '', date: new Date().toISOString() },
+    { profileId: profile?.id ?? '', date: TODAY_ISO },
     { enabled: !!profile?.id, retry: false },
   );
 
   const mealLogs = trpc.meal.getDailyLogs.useQuery(
-    { profileId: profile?.id ?? '', date: new Date().toISOString() },
+    { profileId: profile?.id ?? '', date: TODAY_ISO },
     { enabled: !!profile?.id, retry: false },
   );
 
@@ -188,11 +191,11 @@ export default function HomeScreen() {
         <View style={styles.header}>
           <View>
             <Text style={[styles.greeting, { fontSize: greetingSize }]}>
-              {profiles.isLoading ? 'Xin chào! 👋' : `Xin chào, ${profile?.name ?? 'bạn'}! 👋`}
+              {profileLoading ? 'Xin chào! 👋' : `Xin chào, ${profile?.name ?? 'bạn'}! 👋`}
             </Text>
             <Text style={styles.date}>{TODAY}</Text>
           </View>
-          <ProfileSwitcher activeProfile={profile ?? null} />
+          <ProfileSwitcher />
         </View>
 
         {/* Teen streak banner */}
@@ -317,11 +320,15 @@ export default function HomeScreen() {
 
         {/* CTA */}
         <TouchableOpacity
-          style={[styles.quickLog, { backgroundColor: primaryColor }]}
+          style={[
+            styles.quickLog,
+            { backgroundColor: primaryColor, minHeight: buttonHeight },
+            isSenior && styles.quickLogSenior,
+          ]}
           onPress={() => router.push(quickLogRoute as any)}
         >
-          <Ionicons name={isBaby ? 'restaurant' : 'camera'} size={20} color="#fff" />
-          <Text style={styles.quickLogText}>{quickLogLabel}</Text>
+          <Ionicons name={isBaby ? 'restaurant' : 'camera'} size={isSenior ? 26 : 20} color="#fff" />
+          <Text style={[styles.quickLogText, isSenior && styles.quickLogTextSenior]}>{quickLogLabel}</Text>
         </TouchableOpacity>
 
         <View style={{ height: 20 }} />
@@ -440,4 +447,6 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
   },
   quickLogText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  quickLogSenior: { padding: 18, borderRadius: 18 },
+  quickLogTextSenior: { fontSize: 19 },
 });

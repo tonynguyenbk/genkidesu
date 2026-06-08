@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal, FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
-import { trpc } from '../lib/trpc';
 import { useRouter } from 'expo-router';
+import { useActiveProfile } from '../hooks/useActiveProfile';
 
 const TYPE_COLORS: Record<string, string> = {
   adult: '#2ECC71', senior: '#F59E0B', teen: '#8B5CF6', baby: '#EC4899',
@@ -12,21 +12,10 @@ const TYPE_ICONS: Record<string, string> = {
   adult: '👤', senior: '👴', teen: '🧑', baby: '👶',
 };
 
-interface Profile {
-  id: string;
-  name: string;
-  type: string;
-  tdeeKcal: number | null;
-}
-
-interface Props {
-  activeProfile: Profile | null;
-}
-
-export function ProfileSwitcher({ activeProfile }: Props) {
+export function ProfileSwitcher() {
   const [open, setOpen] = useState(false);
   const router = useRouter();
-  const profiles = trpc.profile.list.useQuery(undefined, { retry: false });
+  const { activeProfile, setActiveProfile, profiles } = useActiveProfile();
 
   const color = TYPE_COLORS[activeProfile?.type ?? 'adult'] ?? '#2ECC71';
   const initial = activeProfile?.name?.[0]?.toUpperCase() ?? 'G';
@@ -38,7 +27,7 @@ export function ProfileSwitcher({ activeProfile }: Props) {
         onPress={() => setOpen(true)}
       >
         <Text style={styles.avatarText}>{initial}</Text>
-        {(profiles.data?.length ?? 0) > 1 && (
+        {profiles.length > 1 && (
           <View style={styles.badge}>
             <Ionicons name="chevron-down" size={8} color="#fff" />
           </View>
@@ -61,7 +50,7 @@ export function ProfileSwitcher({ activeProfile }: Props) {
             </View>
 
             <FlatList
-              data={profiles.data ?? []}
+              data={profiles}
               keyExtractor={(p) => p.id}
               renderItem={({ item }) => {
                 const pColor = TYPE_COLORS[item.type] ?? '#2ECC71';
@@ -69,7 +58,7 @@ export function ProfileSwitcher({ activeProfile }: Props) {
                 return (
                   <TouchableOpacity
                     style={[styles.profileRow, isActive && styles.profileRowActive]}
-                    onPress={() => setOpen(false)}
+                    onPress={() => { setActiveProfile(item.id); setOpen(false); }}
                   >
                     <View style={[styles.profileAvatar, { backgroundColor: pColor + '20' }]}>
                       <Text style={{ fontSize: 20 }}>{TYPE_ICONS[item.type] ?? '👤'}</Text>
