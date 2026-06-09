@@ -8,6 +8,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { trpc } from '../../lib/trpc';
 import { useProfileTheme } from '../../hooks/useProfileTheme';
+import { useActiveProfile } from '../../hooks/useActiveProfile';
 
 type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
 
@@ -32,7 +33,7 @@ export default function CameraScreen() {
   const [mealType, setMealType] = useState<MealType>(getDefaultMealType());
   const [scanning, setScanning] = useState(false);
 
-  const profiles = trpc.profile.list.useQuery(undefined, { retry: false });
+  const { activeProfile } = useActiveProfile();
   const scan = trpc.meal.scan.useMutation();
   const { isBaby, isSenior, primaryColor, buttonHeight } = useProfileTheme();
 
@@ -68,7 +69,7 @@ export default function CameraScreen() {
 
   const handleScan = useCallback(async () => {
     if (!imageUri) return;
-    const profileId = profiles.data?.[0]?.id;
+    const profileId = activeProfile?.id;
     if (!profileId) {
       Alert.alert('Cần đăng nhập', 'Hãy tạo hồ sơ trước khi ghi nhận bữa ăn');
       return;
@@ -95,7 +96,7 @@ export default function CameraScreen() {
     } finally {
       setScanning(false);
     }
-  }, [imageUri, profiles.data, mealType, scan, router]);
+  }, [imageUri, activeProfile, mealType, scan, router]);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -212,7 +213,7 @@ export default function CameraScreen() {
           <TouchableOpacity
             style={styles.manualBtn}
             onPress={() => {
-              const profileId = profiles.data?.[0]?.id;
+              const profileId = activeProfile?.id;
               if (profileId) {
                 router.push({
                   pathname: '/food-search',
