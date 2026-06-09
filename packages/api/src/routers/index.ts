@@ -4,6 +4,7 @@ import { profileRouter } from './profile.js';
 import { familyRouter } from './family.js';
 import { foodRouter } from './food.js';
 import { mealRouter } from './meal.js';
+import { healthRouter } from './health.js';
 import { subscriptionRouter } from './subscription.js';
 
 export type { VisionResult, DetectedDish } from '../ai/vision.js';
@@ -14,6 +15,7 @@ export const appRouter = router({
   family: familyRouter,
   food: foodRouter,
   meal: mealRouter,
+  health: healthRouter,
   subscription: subscriptionRouter,
 });
 

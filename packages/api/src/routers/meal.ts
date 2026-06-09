@@ -2,6 +2,7 @@ import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { protectedProcedure, router } from '../trpc.js';
 import { analyzeFoodImage } from '../ai/vision.js';
+import { generateHealthAlerts } from '../services/health-alerts.js';
 
 const mealTypeSchema = z.enum(['breakfast', 'lunch', 'dinner', 'snack', 'baby_meal', 'formula']);
 
@@ -13,8 +14,18 @@ export const mealRouter = router({
       profileId: z.string().uuid(),
       mealType: mealTypeSchema,
     }))
-    .mutation(async ({ input }) => {
+    .mutation(async ({ input, ctx }) => {
       const result = await analyzeFoodImage(input.imageDataUrl);
+
+      const conditions = await ctx.prisma.healthCondition.findMany({
+        where: { profileId: input.profileId },
+        select: { condition: true },
+      });
+      const healthAlerts = generateHealthAlerts(result.dishes, conditions);
+      if (healthAlerts.length) {
+        result.alerts = [...healthAlerts, ...result.alerts];
+      }
+
       return result;
     }),
 

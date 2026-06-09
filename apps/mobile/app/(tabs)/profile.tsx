@@ -136,7 +136,7 @@ export default function ProfileScreen() {
               value={goal ? `${goal.toLocaleString()} kcal` : undefined}
               onPress={() => {}}
             />
-            <MenuItem icon="medical-outline" label="Bệnh lý & Chế độ ăn" onPress={() => {}} />
+            <MenuItem icon="medical-outline" label="Bệnh lý & Chế độ ăn" onPress={() => router.push('/profile/health' as any)} />
           </View>
         </View>
 
