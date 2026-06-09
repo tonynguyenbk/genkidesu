@@ -37,7 +37,9 @@ export function useActiveProfile() {
     storage.set(ACTIVE_PROFILE_KEY, id);
   }, [queryClient]);
 
-  const list = profiles.data ?? [];
+  // Explicit type annotation breaks tRPC's deep type-inference chain,
+  // preventing TS2589 "Type instantiation is excessively deep" errors.
+  const list: Array<{ id: string; name: string; type: string; tdeeKcal: number | null; heightCm: number | null; weightKg: number | null; activityLevel: number; nutritionTargets: unknown; uiPreferences: unknown }> = profiles.data ?? [];
   const activeProfile = list.find((p) => p.id === activeId) ?? list[0] ?? null;
 
   return { activeProfile, setActiveProfile, profiles: list, isLoading: profiles.isLoading };

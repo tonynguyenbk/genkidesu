@@ -114,12 +114,16 @@ export default function MealResultScreen() {
 
   const confirm = trpc.meal.confirmLog.useMutation({
     onSuccess: () => {
-      // Invalidate home screen queries so they refetch immediately
       queryClient.invalidateQueries({ queryKey: [['meal', 'getDailySummary']] });
       queryClient.invalidateQueries({ queryKey: [['meal', 'getDailyLogs']] });
-      Alert.alert('Đã lưu! ✓', 'Bữa ăn đã được ghi nhận thành công.', [
-        { text: 'OK', onPress: () => router.replace('/(tabs)') },
-      ]);
+      // Alert.alert onPress callbacks don't fire on web — navigate directly instead.
+      if (Platform.OS === 'web') {
+        router.replace('/(tabs)');
+      } else {
+        Alert.alert('Đã lưu! ✓', 'Bữa ăn đã được ghi nhận thành công.', [
+          { text: 'OK', onPress: () => router.replace('/(tabs)') },
+        ]);
+      }
     },
     onError: (e) => Alert.alert('Lỗi', e.message),
   });
