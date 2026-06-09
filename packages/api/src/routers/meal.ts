@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { protectedProcedure, router } from '../trpc.js';
 import { analyzeFoodImage } from '../ai/vision.js';
 import { generateHealthAlerts } from '../services/health-alerts.js';
+import { assertProfileAccess } from '../utils/family-access.js';
 
 const mealTypeSchema = z.enum(['breakfast', 'lunch', 'dinner', 'snack', 'baby_meal', 'formula']);
 
@@ -117,10 +118,7 @@ export const mealRouter = router({
       date: z.string().datetime().optional(),
     }))
     .query(async ({ input, ctx }) => {
-      const profile = await ctx.prisma.profile.findFirst({
-        where: { id: input.profileId, userId: ctx.userId },
-      });
-      if (!profile) throw new TRPCError({ code: 'FORBIDDEN' });
+      await assertProfileAccess(ctx.prisma, ctx.userId, input.profileId);
 
       const date = input.date ? new Date(input.date) : new Date();
       const start = new Date(date);
@@ -143,10 +141,7 @@ export const mealRouter = router({
       to: z.string().datetime(),
     }))
     .query(async ({ input, ctx }) => {
-      const profile = await ctx.prisma.profile.findFirst({
-        where: { id: input.profileId, userId: ctx.userId },
-      });
-      if (!profile) throw new TRPCError({ code: 'FORBIDDEN' });
+      await assertProfileAccess(ctx.prisma, ctx.userId, input.profileId);
 
       const from = new Date(input.from);
       from.setHours(0, 0, 0, 0);

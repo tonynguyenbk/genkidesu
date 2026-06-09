@@ -122,8 +122,9 @@ export const familyRouter = router({
         const privacy = privacySettings as Record<string, unknown>;
         if (privacy?.show_details_to_family === false) continue;
 
+        const todayUtc = today.toISOString().slice(0, 10);
         const todaySummary = profile.dailySummaries.find(
-          (s) => s.summaryDate.toDateString() === today.toDateString(),
+          (s) => s.summaryDate.toISOString().slice(0, 10) === todayUtc,
         );
         const calorieGoal =
           (profile.nutritionTargets as Record<string, number> | null)?.calories ??
@@ -314,6 +315,40 @@ export const familyRouter = router({
       }
 
       await ctx.prisma.familyMember.delete({ where: { id: member.id } });
+      return { success: true };
+    }),
+
+  // Add an existing profile (owned by the caller) to a family they belong to
+  addProfile: protectedProcedure
+    .input(z.object({ familyId: z.string().uuid(), profileId: z.string().uuid() }))
+    .mutation(async ({ input, ctx }) => {
+      // Caller must be a member (or owner) of this family
+      const myProfiles = await ctx.prisma.profile.findMany({
+        where: { userId: ctx.userId },
+        select: { id: true },
+      });
+      const myProfileIds = myProfiles.map((p) => p.id);
+
+      const callerMember = await ctx.prisma.familyMember.findFirst({
+        where: { familyId: input.familyId, profileId: { in: myProfileIds } },
+      });
+      if (!callerMember) throw new TRPCError({ code: 'FORBIDDEN' });
+
+      // Target profile must belong to the caller
+      const profile = await ctx.prisma.profile.findFirst({
+        where: { id: input.profileId, userId: ctx.userId },
+      });
+      if (!profile) throw new TRPCError({ code: 'FORBIDDEN' });
+
+      const existing = await ctx.prisma.familyMember.findUnique({
+        where: { familyId_profileId: { familyId: input.familyId, profileId: input.profileId } },
+      });
+      if (existing) throw new TRPCError({ code: 'BAD_REQUEST', message: 'Đã là thành viên' });
+
+      const role = profile.type === 'baby' || profile.type === 'teen' ? 'child' : 'member';
+      await ctx.prisma.familyMember.create({
+        data: { familyId: input.familyId, profileId: input.profileId, role },
+      });
       return { success: true };
     }),
 });

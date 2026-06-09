@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import {
   View, Text, StyleSheet, SafeAreaView, ScrollView,
-  TouchableOpacity, Platform, ActivityIndicator,
+  TouchableOpacity, Platform, ActivityIndicator, Modal, Alert as RNAlert,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -225,9 +225,11 @@ function EmptyState() {
 export default function FamilyScreen() {
   const router = useRouter();
   const [copied, setCopied] = useState(false);
+  const [showAddProfile, setShowAddProfile] = useState(false);
 
   const families = trpc.family.list.useQuery(undefined, { retry: false });
   const family = (families.data as any[])?.[0];
+  const utils = trpc.useUtils();
 
   const dashboard = trpc.family.getDashboard.useQuery(
     { familyId: family?.id ?? '' },
@@ -238,6 +240,20 @@ export default function FamilyScreen() {
     { familyId: family?.id ?? '' },
     { enabled: !!family?.id, staleTime: 60_000 },
   );
+
+  const allProfiles = trpc.profile.list.useQuery(undefined, { retry: false });
+  const memberProfileIds = new Set(
+    ((dashboard.data as any)?.members ?? []).map((m: any) => m.profile.id as string),
+  );
+  const unaddedProfiles = (allProfiles.data ?? []).filter((p) => !memberProfileIds.has(p.id));
+
+  const addProfileMutation = trpc.family.addProfile.useMutation({
+    onSuccess: () => {
+      utils.family.getDashboard.invalidate({ familyId: family?.id });
+      utils.family.getAlerts.invalidate({ familyId: family?.id });
+    },
+    onError: (e) => RNAlert.alert('Lỗi', e.message),
+  });
 
   const handleCopyCode = async () => {
     if (!family?.inviteCode) return;
@@ -326,14 +342,14 @@ export default function FamilyScreen() {
             <View style={styles.actions}>
               <TouchableOpacity
                 style={styles.actionBtn}
-                onPress={() => router.push('/family/join')}
+                onPress={handleCopyCode}
               >
-                <Ionicons name="link-outline" size={18} color="#2ECC71" />
-                <Text style={styles.actionText}>Mời thành viên</Text>
+                <Ionicons name={copied ? 'checkmark-circle' : 'share-outline'} size={18} color="#2ECC71" />
+                <Text style={styles.actionText}>{copied ? 'Đã sao chép!' : 'Chia sẻ mã mời'}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.actionBtn, styles.actionBtnSec]}
-                onPress={() => router.push('/profile/create')}
+                onPress={() => unaddedProfiles.length > 0 ? setShowAddProfile(true) : router.push('/profile/create')}
               >
                 <Ionicons name="add-circle-outline" size={18} color="#6B7280" />
                 <Text style={[styles.actionText, { color: '#6B7280' }]}>Thêm hồ sơ</Text>
@@ -343,6 +359,61 @@ export default function FamilyScreen() {
         )}
         <View style={{ height: 40 }} />
       </ScrollView>
+
+      {/* Modal: add existing profile to family */}
+      <Modal visible={showAddProfile} transparent animationType="slide" onRequestClose={() => setShowAddProfile(false)}>
+        <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={() => setShowAddProfile(false)}>
+          <View style={styles.sheet}>
+            <View style={styles.sheetHeader}>
+              <Text style={styles.sheetTitle}>Thêm vào gia đình</Text>
+              <TouchableOpacity onPress={() => setShowAddProfile(false)}>
+                <Ionicons name="close" size={22} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+            <ScrollView>
+              {unaddedProfiles.length === 0 ? (
+                <View style={{ padding: 24, alignItems: 'center' }}>
+                  <Text style={{ color: '#9CA3AF', fontSize: 14 }}>Tất cả hồ sơ đã trong gia đình</Text>
+                  <TouchableOpacity
+                    style={[styles.actionBtn, { marginTop: 16, paddingHorizontal: 24 }]}
+                    onPress={() => { setShowAddProfile(false); router.push('/profile/create'); }}
+                  >
+                    <Ionicons name="add-circle-outline" size={16} color="#2ECC71" />
+                    <Text style={styles.actionText}>Tạo hồ sơ mới</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                unaddedProfiles.map((p) => {
+                  const color = TYPE_COLORS[p.type] ?? '#2ECC71';
+                  return (
+                    <TouchableOpacity
+                      key={p.id}
+                      style={styles.profileOption}
+                      onPress={() => {
+                        addProfileMutation.mutate({ familyId: family.id, profileId: p.id });
+                        setShowAddProfile(false);
+                      }}
+                      disabled={addProfileMutation.isPending}
+                    >
+                      <View style={[styles.profileOptionAvatar, { backgroundColor: color + '20' }]}>
+                        <Text style={[styles.profileOptionAvatarText, { color }]}>
+                          {p.name[0]?.toUpperCase()}
+                        </Text>
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.profileOptionName}>{p.name}</Text>
+                        <Text style={styles.profileOptionType}>{TYPE_LABELS[p.type] ?? p.type}</Text>
+                      </View>
+                      <Ionicons name="add-circle-outline" size={22} color="#2ECC71" />
+                    </TouchableOpacity>
+                  );
+                })
+              )}
+              <View style={{ height: 20 }} />
+            </ScrollView>
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -460,6 +531,24 @@ const styles = StyleSheet.create({
   },
   actionBtnSec: { backgroundColor: '#F9FAFB', borderColor: '#E5E7EB' },
   actionText: { fontSize: 14, fontWeight: '600', color: '#2ECC71' },
+
+  // Add profile modal
+  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
+  sheet: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingBottom: 32, maxHeight: '70%' },
+  sheetHeader: {
+    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+    padding: 20, borderBottomWidth: 1, borderBottomColor: '#F3F4F6',
+  },
+  sheetTitle: { fontSize: 17, fontWeight: '700', color: '#111827' },
+  profileOption: {
+    flexDirection: 'row', alignItems: 'center', gap: 12,
+    paddingHorizontal: 20, paddingVertical: 14,
+    borderBottomWidth: 1, borderBottomColor: '#F9FAFB',
+  },
+  profileOptionAvatar: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
+  profileOptionAvatarText: { fontSize: 18, fontWeight: '700' },
+  profileOptionName: { fontSize: 14, fontWeight: '600', color: '#111827' },
+  profileOptionType: { fontSize: 12, color: '#9CA3AF', marginTop: 2 },
 
   // Empty state
   emptyState: { alignItems: 'center', paddingTop: 80, paddingHorizontal: 32, gap: 12 },

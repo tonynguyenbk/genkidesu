@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { assessGrowth, getAgeMonthsFromBirthDate } from '@genki/shared';
 import { protectedProcedure, router } from '../trpc.js';
 import { calculateTDEE, getDefaultNutritionTargets, getDefaultUiPreferences } from '../services/tdee.js';
+import { assertProfileAccess } from '../utils/family-access.js';
 
 const MAX_PROFILES = 10;
 
@@ -101,11 +102,7 @@ export const profileRouter = router({
   getById: protectedProcedure
     .input(z.object({ id: z.string().uuid() }))
     .query(async ({ input, ctx }) => {
-      const profile = await ctx.prisma.profile.findFirst({
-        where: { id: input.id, userId: ctx.userId, isActive: true },
-      });
-      if (!profile) throw new TRPCError({ code: 'NOT_FOUND' });
-      return profile;
+      return assertProfileAccess(ctx.prisma, ctx.userId, input.id);
     }),
 
   calculateTDEE: protectedProcedure

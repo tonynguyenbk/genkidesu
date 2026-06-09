@@ -155,10 +155,10 @@ export default function MemberDetailScreen() {
   const color = TYPE_COLORS[p?.type ?? 'adult'] ?? '#2ECC71';
   const initial = p?.name?.[0]?.toUpperCase() ?? '?';
 
-  const todaySummary = (summaries.data as any[])?.find((s: any) => {
-    const d = new Date(s.summaryDate);
-    return d.toDateString() === today.toDateString();
-  });
+  const todayUtc = today.toISOString().slice(0, 10);
+  const todaySummary = (summaries.data as any[])?.find(
+    (s: any) => new Date(s.summaryDate).toISOString().slice(0, 10) === todayUtc,
+  );
 
   const caloriesEaten = todaySummary?.totalCalories ?? 0;
   const caloriesGoal = (p?.nutritionTargets as any)?.calories ?? p?.tdeeKcal ?? 1800;

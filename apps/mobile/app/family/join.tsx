@@ -2,14 +2,17 @@ import { useState } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, SafeAreaView, Alert, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { trpc } from '../../lib/trpc';
+import { useActiveProfile } from '../../hooks/useActiveProfile';
 
 export default function JoinFamilyScreen() {
   const router = useRouter();
   const [code, setCode] = useState('');
 
-  const listProfiles = trpc.profile.list.useQuery();
+  const { activeProfile } = useActiveProfile();
+  const utils = trpc.useUtils();
   const joinFamily = trpc.family.join.useMutation({
     onSuccess: () => {
+      utils.family.list.invalidate();
       Alert.alert('Thành công', 'Đã tham gia gia đình!');
       router.replace('/(tabs)/family');
     },
@@ -17,9 +20,8 @@ export default function JoinFamilyScreen() {
   });
 
   const handleJoin = () => {
-    const firstProfile = listProfiles.data?.[0];
-    if (!firstProfile) return Alert.alert('Lỗi', 'Cần tạo hồ sơ trước');
-    joinFamily.mutate({ inviteCode: code.toUpperCase(), profileId: firstProfile.id });
+    if (!activeProfile) return Alert.alert('Lỗi', 'Cần tạo hồ sơ trước');
+    joinFamily.mutate({ inviteCode: code.toUpperCase(), profileId: activeProfile.id });
   };
 
   return (

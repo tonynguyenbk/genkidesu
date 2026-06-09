@@ -9,8 +9,12 @@ export default function CreateFamilyScreen() {
   const [name, setName] = useState('');
   const [inviteCode, setInviteCode] = useState('');
 
+  const utils = trpc.useUtils();
   const createFamily = trpc.family.create.useMutation({
-    onSuccess: (data) => setInviteCode(data.inviteCode),
+    onSuccess: (data) => {
+      utils.family.list.invalidate();
+      setInviteCode(data.inviteCode);
+    },
     onError: (e) => Alert.alert('Lỗi', e.message),
   });
 
