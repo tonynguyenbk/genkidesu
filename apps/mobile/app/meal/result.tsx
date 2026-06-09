@@ -6,6 +6,7 @@ import {
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { trpc, queryClient } from '../../lib/trpc';
+import { useProfileTheme } from '../../hooks/useProfileTheme';
 import type { VisionResult, DetectedDish } from '@genki/api';
 
 type EditableDish = DetectedDish & { key: string };
@@ -94,6 +95,11 @@ function DishCard({
 
 export default function MealResultScreen() {
   const router = useRouter();
+  const { isSenior, simplifiedMode } = useProfileTheme();
+  // null = user hasn't toggled yet → derive from simplifiedMode (which loads async).
+  // Once user taps the toggle we store an explicit boolean override.
+  const [showDetailsOverride, setShowDetailsOverride] = useState<boolean | null>(null);
+  const showDetails = showDetailsOverride !== null ? showDetailsOverride : !simplifiedMode;
   const params = useLocalSearchParams<{
     scanData: string;
     profileId: string;
@@ -218,26 +224,63 @@ export default function MealResultScreen() {
           </View>
         ))}
 
-        {/* Dish list */}
-        <Text style={styles.sectionTitle}>
-          {dishes.length} món đã nhận diện — chỉnh sửa nếu cần
-        </Text>
+        {/* Dish list — senior/simplified profiles see a plain readout first,
+            with detailed editing tucked behind an explicit toggle so the
+            default path stays "chụp ảnh → xác nhận → xong" (≤2 bước). */}
+        {simplifiedMode && !showDetails ? (
+          <>
+            <Text style={[styles.sectionTitle, isSenior && styles.sectionTitleSenior]}>
+              Đã nhận diện {dishes.length} món
+            </Text>
+            <View style={styles.simpleList}>
+              {dishes.map((dish) => (
+                <View key={dish.key} style={styles.simpleRow}>
+                  <Text style={[styles.simpleDishName, isSenior && styles.simpleDishNameSenior]}>
+                    {dish.nameVi}
+                  </Text>
+                  <Text style={[styles.simpleDishCal, isSenior && styles.simpleDishCalSenior]}>
+                    {Math.round(dish.calories)} kcal
+                  </Text>
+                </View>
+              ))}
+            </View>
+            <TouchableOpacity style={styles.detailsToggle} onPress={() => setShowDetailsOverride(true)}>
+              <Ionicons name="create-outline" size={isSenior ? 22 : 18} color="#2ECC71" />
+              <Text style={[styles.detailsToggleText, isSenior && styles.detailsToggleTextSenior]}>
+                Xem &amp; chỉnh sửa chi tiết từng món
+              </Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <>
+            <Text style={styles.sectionTitle}>
+              {dishes.length} món đã nhận diện — chỉnh sửa nếu cần
+            </Text>
 
-        {dishes.map((dish, i) => (
-          <DishCard
-            key={dish.key}
-            dish={dish}
-            index={i}
-            onRemove={(k) => setDishes((p) => p.filter((d) => d.key !== k))}
-            onPortionChange={handlePortionChange}
-          />
-        ))}
+            {dishes.map((dish, i) => (
+              <DishCard
+                key={dish.key}
+                dish={dish}
+                index={i}
+                onRemove={(k) => setDishes((p) => p.filter((d) => d.key !== k))}
+                onPortionChange={handlePortionChange}
+              />
+            ))}
 
-        {/* Add manual */}
-        <TouchableOpacity style={styles.addManual}>
-          <Ionicons name="add-circle-outline" size={20} color="#2ECC71" />
-          <Text style={styles.addManualText}>Thêm món thủ công</Text>
-        </TouchableOpacity>
+            {/* Add manual */}
+            <TouchableOpacity style={styles.addManual}>
+              <Ionicons name="add-circle-outline" size={20} color="#2ECC71" />
+              <Text style={styles.addManualText}>Thêm món thủ công</Text>
+            </TouchableOpacity>
+
+            {simplifiedMode && (
+              <TouchableOpacity style={styles.detailsToggle} onPress={() => setShowDetailsOverride(false)}>
+                <Ionicons name="chevron-up-outline" size={18} color="#9CA3AF" />
+                <Text style={styles.detailsToggleTextCollapse}>Thu gọn</Text>
+              </TouchableOpacity>
+            )}
+          </>
+        )}
 
         <View style={{ height: 120 }} />
       </ScrollView>
@@ -245,7 +288,11 @@ export default function MealResultScreen() {
       {/* Confirm button (fixed bottom) */}
       <View style={styles.bottomBar}>
         <TouchableOpacity
-          style={[styles.confirmBtn, (confirm.isPending || dishes.length === 0) && styles.confirmBtnDisabled]}
+          style={[
+            styles.confirmBtn,
+            isSenior && styles.confirmBtnSenior,
+            (confirm.isPending || dishes.length === 0) && styles.confirmBtnDisabled,
+          ]}
           onPress={handleConfirm}
           disabled={confirm.isPending || dishes.length === 0}
         >
@@ -253,8 +300,10 @@ export default function MealResultScreen() {
             <ActivityIndicator color="#fff" />
           ) : (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-              <Ionicons name="checkmark-circle" size={22} color="#fff" />
-              <Text style={styles.confirmBtnText}>Lưu bữa ăn · {Math.round(totals.cal)} kcal</Text>
+              <Ionicons name="checkmark-circle" size={isSenior ? 26 : 22} color="#fff" />
+              <Text style={[styles.confirmBtnText, isSenior && styles.confirmBtnTextSenior]}>
+                Xác nhận · {Math.round(totals.cal)} kcal
+              </Text>
             </View>
           )}
         </TouchableOpacity>
@@ -305,6 +354,29 @@ const styles = StyleSheet.create({
     fontSize: 13, fontWeight: '600', color: '#9CA3AF',
     paddingHorizontal: 20, paddingTop: 8, paddingBottom: 6,
   },
+  sectionTitleSenior: { fontSize: 16, color: '#6B7280' },
+  simpleList: {
+    backgroundColor: '#fff', marginHorizontal: 16, marginBottom: 4,
+    borderRadius: 16, paddingVertical: 4,
+    shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, elevation: 1,
+  },
+  simpleRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingHorizontal: 18, paddingVertical: 14,
+    borderBottomWidth: 1, borderBottomColor: '#F9FAFB',
+  },
+  simpleDishName: { fontSize: 15, fontWeight: '600', color: '#111827', flex: 1 },
+  simpleDishNameSenior: { fontSize: 19 },
+  simpleDishCal: { fontSize: 14, fontWeight: '700', color: '#2ECC71', marginLeft: 12 },
+  simpleDishCalSenior: { fontSize: 18 },
+  detailsToggle: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+    marginHorizontal: 16, marginTop: 10, padding: 14,
+    borderRadius: 14, borderWidth: 1.5, borderColor: '#E5E7EB', borderStyle: 'dashed',
+  },
+  detailsToggleText: { fontSize: 14, color: '#2ECC71', fontWeight: '600' },
+  detailsToggleTextSenior: { fontSize: 17 },
+  detailsToggleTextCollapse: { fontSize: 14, color: '#9CA3AF', fontWeight: '600' },
   dishCard: {
     backgroundColor: '#fff', marginHorizontal: 16, marginBottom: 10,
     borderRadius: 16, padding: 14,
@@ -347,6 +419,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#2ECC71', padding: 17, borderRadius: 16, alignItems: 'center',
     shadowColor: '#2ECC71', shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
   },
+  confirmBtnSenior: { padding: 21, borderRadius: 18 },
   confirmBtnDisabled: { backgroundColor: '#9CA3AF' },
   confirmBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  confirmBtnTextSenior: { fontSize: 19 },
 });
