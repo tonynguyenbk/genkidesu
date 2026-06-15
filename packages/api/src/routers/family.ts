@@ -269,6 +269,16 @@ export const familyRouter = router({
       return { profile, familyMember };
     }),
 
+  // FamilyMember row for one of the caller's own profiles — powers the
+  // privacy settings UI (familyMemberId + current privacySettings).
+  getMembership: protectedProcedure
+    .input(z.object({ profileId: z.string().uuid() }))
+    .query(async ({ input, ctx }) => {
+      return ctx.prisma.familyMember.findFirst({
+        where: { profileId: input.profileId, profile: { userId: ctx.userId } },
+      });
+    }),
+
   updatePrivacy: protectedProcedure
     .input(z.object({
       familyMemberId: z.string().uuid(),

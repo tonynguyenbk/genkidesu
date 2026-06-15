@@ -9,6 +9,12 @@ const server = Fastify({
   logger: {
     level: process.env['NODE_ENV'] === 'development' ? 'info' : 'warn',
   },
+  // tRPC batches multiple procedure calls into one comma-separated
+  // `:path` segment (e.g. "family.getMembership,meal.getDailyLogs,...").
+  // find-my-way's default maxParamLength (100) silently 404s any batch
+  // whose joined procedure names exceed that, so raise it well above
+  // what a real batched request could need.
+  maxParamLength: 5000,
 });
 
 await server.register(cors, { origin: true, credentials: true });

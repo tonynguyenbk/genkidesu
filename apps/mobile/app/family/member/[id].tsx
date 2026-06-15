@@ -1,6 +1,6 @@
 import {
   View, Text, StyleSheet, SafeAreaView, ScrollView,
-  TouchableOpacity, ActivityIndicator,
+  TouchableOpacity, ActivityIndicator, Switch,
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -129,6 +129,66 @@ function WeekChart({ summaries }: { summaries: any[] }) {
   );
 }
 
+function PrivacyCard({ profileId }: { profileId: string }) {
+  const utils = trpc.useUtils();
+  const membership = trpc.family.getMembership.useQuery(
+    { profileId },
+    { enabled: !!profileId, retry: false },
+  );
+
+  const updatePrivacy = trpc.family.updatePrivacy.useMutation({
+    onSuccess: () => utils.family.invalidate(),
+  });
+
+  if (!membership.data) return null;
+
+  const privacy = (membership.data.privacySettings as Record<string, unknown>) ?? {};
+  const showDetails = privacy['show_details_to_family'] !== false;
+  const showMeals = privacy['show_meal_logs'] !== false;
+
+  const toggle = (field: 'showDetailsToFamily' | 'showMealLogs', value: boolean) => {
+    updatePrivacy.mutate({
+      familyMemberId: membership.data!.id,
+      privacySettings: {
+        showDetailsToFamily: field === 'showDetailsToFamily' ? value : showDetails,
+        showMealLogs: field === 'showMealLogs' ? value : showMeals,
+      },
+    });
+  };
+
+  return (
+    <View style={styles.privacyCard}>
+      <Text style={styles.cardTitle}>Quyền riêng tư</Text>
+      <View style={styles.privacyRow}>
+        <View style={{ flex: 1, marginRight: 12 }}>
+          <Text style={styles.privacyLabel}>Hiển thị với gia đình</Text>
+          <Text style={styles.privacySub}>Cho phép gia đình xem dinh dưỡng & cảnh báo của hồ sơ này</Text>
+        </View>
+        <Switch
+          value={showDetails}
+          onValueChange={(v) => toggle('showDetailsToFamily', v)}
+          disabled={updatePrivacy.isPending}
+          trackColor={{ false: '#E5E7EB', true: '#86EFAC' }}
+          thumbColor={showDetails ? '#2ECC71' : '#9CA3AF'}
+        />
+      </View>
+      <View style={[styles.privacyRow, !showDetails && { opacity: 0.4 }]}>
+        <View style={{ flex: 1, marginRight: 12 }}>
+          <Text style={styles.privacyLabel}>Hiển thị chi tiết bữa ăn</Text>
+          <Text style={styles.privacySub}>Cho phép gia đình xem từng món đã ăn</Text>
+        </View>
+        <Switch
+          value={showMeals}
+          onValueChange={(v) => toggle('showMealLogs', v)}
+          disabled={updatePrivacy.isPending || !showDetails}
+          trackColor={{ false: '#E5E7EB', true: '#86EFAC' }}
+          thumbColor={showMeals ? '#2ECC71' : '#9CA3AF'}
+        />
+      </View>
+    </View>
+  );
+}
+
 export default function MemberDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
@@ -237,8 +297,13 @@ export default function MemberDetailScreen() {
         </View>
 
         {/* Weekly chart */}
-        <View style={{ paddingHorizontal: 16 }}>
+        <View style={{ paddingHorizontal: 16, marginBottom: 12 }}>
           <WeekChart summaries={(summaries.data as any[]) ?? []} />
+        </View>
+
+        {/* Privacy settings (only shown for the caller's own profiles) */}
+        <View style={{ paddingHorizontal: 16 }}>
+          <PrivacyCard profileId={id ?? ''} />
         </View>
       </ScrollView>
     </SafeAreaView>
@@ -326,4 +391,15 @@ const styles = StyleSheet.create({
   chartDay: { fontSize: 10, color: '#9CA3AF', marginTop: 4 },
 
   cardTitle: { fontSize: 14, fontWeight: '700', color: '#111827', marginBottom: 4 },
+
+  privacyCard: {
+    backgroundColor: '#fff', borderRadius: 20, padding: 16,
+    shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 2,
+  },
+  privacyRow: {
+    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+    paddingVertical: 10, borderTopWidth: 1, borderTopColor: '#F9FAFB',
+  },
+  privacyLabel: { fontSize: 13, fontWeight: '600', color: '#111827' },
+  privacySub: { fontSize: 11, color: '#9CA3AF', marginTop: 2 },
 });
