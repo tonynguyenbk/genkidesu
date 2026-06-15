@@ -1,9 +1,12 @@
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
+import { Prisma } from '@genki/db';
 import { protectedProcedure, router } from '../trpc.js';
-import { analyzeFoodImage } from '../ai/vision.js';
+import { analyzeFoodImageCached } from '../ai/cache.js';
+import { matchFoodForDish, applyFoodMatch } from '../ai/rag.js';
 import { generateHealthAlerts } from '../services/health-alerts.js';
 import { assertProfileAccess } from '../utils/family-access.js';
+import { uploadMealImage } from '../integrations/storage.js';
 
 const mealTypeSchema = z.enum(['breakfast', 'lunch', 'dinner', 'snack', 'baby_meal', 'formula']);
 
@@ -16,7 +19,20 @@ export const mealRouter = router({
       mealType: mealTypeSchema,
     }))
     .mutation(async ({ input, ctx }) => {
-      const result = await analyzeFoodImage(input.imageDataUrl);
+      const result = await analyzeFoodImageCached(ctx.prisma, input.imageDataUrl);
+
+      // RAG: match each detected dish against the verified foods table (pgvector
+      // cosine similarity) and prefer verified per-100g nutrition when found.
+      result.dishes = await Promise.all(
+        result.dishes.map(async (dish) => {
+          const match = await matchFoodForDish(ctx.prisma, dish);
+          return match ? applyFoodMatch(dish, match) : dish;
+        }),
+      );
+      result.totalCalories = result.dishes.reduce((s, d) => s + d.calories, 0);
+      result.totalProteinG = result.dishes.reduce((s, d) => s + d.proteinG, 0);
+      result.totalCarbsG = result.dishes.reduce((s, d) => s + d.carbsG, 0);
+      result.totalFatG = result.dishes.reduce((s, d) => s + d.fatG, 0);
 
       const conditions = await ctx.prisma.healthCondition.findMany({
         where: { profileId: input.profileId },
@@ -36,6 +52,7 @@ export const mealRouter = router({
       profileId: z.string().uuid(),
       mealType: mealTypeSchema,
       imageDataUrl: z.string().optional(),
+      rawAiResult: z.unknown().optional(),
       loggedAt: z.string().datetime(),
       dishes: z.array(z.object({
         nameVi: z.string(),
@@ -81,6 +98,26 @@ export const mealRouter = router({
         },
         include: { items: true },
       });
+
+      // Persist the source image (R2, if configured) and the raw AI result for
+      // audit/debugging — no-op if imageDataUrl/rawAiResult weren't provided.
+      if (input.imageDataUrl || input.rawAiResult !== undefined) {
+        const imageUrl = input.imageDataUrl
+          ? await uploadMealImage(input.imageDataUrl, mealLog.id)
+          : null;
+
+        if (imageUrl || input.rawAiResult !== undefined) {
+          await ctx.prisma.mealLog.update({
+            where: { id: mealLog.id },
+            data: {
+              ...(imageUrl ? { imageUrl } : {}),
+              ...(input.rawAiResult !== undefined
+                ? { aiRawResult: input.rawAiResult as Prisma.InputJsonValue }
+                : {}),
+            },
+          });
+        }
+      }
 
       // Upsert daily summary
       const today = new Date(input.loggedAt);

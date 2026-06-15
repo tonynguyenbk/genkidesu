@@ -7,18 +7,20 @@
     "migrate": "prisma migrate dev",
     "migrate:prod": "prisma migrate deploy",
     "seed": "tsx seed/index.ts",
+    "embed": "tsx seed/embed-foods.ts",
     "studio": "prisma studio",
     "generate": "prisma generate",
     "reset": "prisma migrate reset",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
-    "@prisma/client": "^6.1.0"
+    "@prisma/client": "^6.1.0",
+    "openai": "^6.42.0"
   },
   "devDependencies": {
+    "@types/node": "^22.10.2",
     "prisma": "^6.1.0",
     "tsx": "^4.19.2",
-    "typescript": "^5.7.2",
-    "@types/node": "^22.10.2"
+    "typescript": "^5.7.2"
   }
 }

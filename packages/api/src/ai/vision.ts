@@ -10,6 +10,7 @@ export interface DetectedDish {
   fatG: number;
   confidence: number;
   foodId?: string;
+  matchedFood?: boolean;
 }
 
 export interface VisionResult {

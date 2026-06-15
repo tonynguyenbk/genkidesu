@@ -299,3 +299,18 @@ model ActivityLog {
   @@index([profileId, startedAt])
   @@map("activity_logs")
 }
+
+// ==========================================
+// AI CACHE
+// ==========================================
+
+model AiCache {
+  id        String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  imageHash String   @unique @map("image_hash") @db.VarChar(64)
+  aiResult  Json     @map("ai_result")
+  hitCount  Int      @default(1) @map("hit_count")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  expiresAt DateTime @map("expires_at") @db.Timestamptz()
+
+  @@map("ai_cache")
+}
