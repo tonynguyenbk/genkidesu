@@ -180,7 +180,7 @@ export default function HomeScreen() {
   const pct       = caloriesGoal > 0 ? Math.round((eaten / caloriesGoal) * 100) : 0;
   const remaining = Math.max(caloriesGoal - eaten, 0);
 
-  const greetingSize = isSenior ? Math.round(22 * fontScale) : 22;
+  const greetingSize = 20; // fixed — pill already shows profile name prominently
   const quickLogLabel = isBaby ? 'Ghi nhận bữa ăn' : isSenior ? 'Chụp ảnh ngay' : 'Chụp ảnh bữa ăn';
   const quickLogRoute = isBaby ? '/baby-feed' : '/(tabs)/camera';
 
@@ -189,9 +189,9 @@ export default function HomeScreen() {
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
-          <View>
-            <Text style={[styles.greeting, { fontSize: greetingSize }]}>
-              {profileLoading ? 'Xin chào! 👋' : `Xin chào, ${profile?.name ?? 'bạn'}! 👋`}
+          <View style={{ flex: 1, marginRight: 12 }}>
+            <Text style={[styles.greeting, { fontSize: greetingSize }]} numberOfLines={1}>
+              {profileLoading ? 'Xin chào! 👋' : `Chào, ${profile?.name ?? 'bạn'}! 👋`}
             </Text>
             <Text style={styles.date}>{TODAY}</Text>
           </View>
@@ -208,22 +208,37 @@ export default function HomeScreen() {
           <View style={[styles.card, { paddingVertical: 32 }]}>
             <ActivityIndicator color={primaryColor} />
           </View>
-        ) : isSenior ? (
-          <SeniorCalorieCard eaten={eaten} goal={caloriesGoal} remaining={remaining} />
         ) : isBaby ? (
           <BabyFeedingCard logs={mealLogs.data ?? []} profileId={profile?.id} />
         ) : (
           <View style={styles.card}>
             <View style={styles.ringRow}>
               <View style={styles.ringWrapper}>
-                <View style={[styles.ring, { borderColor: '#E5E7EB' }]}>
-                  <View style={[styles.ringProgress, { borderColor: primaryColor }]} />
-                  <View style={styles.ringCenter}>
-                    <Text style={styles.ringNumber}>{Math.round(eaten)}</Text>
-                    <Text style={styles.ringLabel}>kcal</Text>
-                    <Text style={styles.ringSub}>đã ăn</Text>
+                {Platform.OS === 'web' ? (
+                  // Web: conic-gradient gives a real percentage arc
+                  <View
+                    style={[
+                      styles.ringOuter,
+                      // @ts-ignore — react-native-web passes unknown CSS through
+                      { background: `conic-gradient(${primaryColor} ${pct * 3.6}deg, #E5E7EB ${pct * 3.6}deg)` },
+                    ]}
+                  >
+                    <View style={styles.ringInner}>
+                      <Text style={styles.ringNumber}>{Math.round(eaten)}</Text>
+                      <Text style={styles.ringLabel}>kcal</Text>
+                      <Text style={styles.ringSub}>đã ăn</Text>
+                    </View>
                   </View>
-                </View>
+                ) : (
+                  <View style={[styles.ring, { borderColor: '#E5E7EB' }]}>
+                    <View style={[styles.ringProgress, { borderColor: primaryColor }]} />
+                    <View style={styles.ringCenter}>
+                      <Text style={styles.ringNumber}>{Math.round(eaten)}</Text>
+                      <Text style={styles.ringLabel}>kcal</Text>
+                      <Text style={styles.ringSub}>đã ăn</Text>
+                    </View>
+                  </View>
+                )}
               </View>
               <View style={styles.calStats}>
                 {[
@@ -394,6 +409,17 @@ const styles = StyleSheet.create({
   // Standard calorie ring card
   ringRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
   ringWrapper: { marginRight: 24 },
+  // Web ring: outer circle uses conic-gradient background (set via inline style)
+  ringOuter: {
+    width: 110, height: 110, borderRadius: 55,
+    justifyContent: 'center', alignItems: 'center',
+  },
+  // Inner white circle cuts out the center to make it look like a ring
+  ringInner: {
+    width: 84, height: 84, borderRadius: 42,
+    backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center',
+  },
+  // Native ring (border trick)
   ring: {
     width: 110, height: 110, borderRadius: 55,
     borderWidth: 10, justifyContent: 'center', alignItems: 'center',

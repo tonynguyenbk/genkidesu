@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Platform, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { trpc } from '../../lib/trpc';
+import { useActiveProfile } from '../../hooks/useActiveProfile';
 
 const MEAL_LABELS: Record<string, string> = {
   breakfast: '🌅 Sáng', lunch: '☀️ Trưa', dinner: '🌙 Tối', snack: '🍎 Snack',
@@ -16,11 +17,13 @@ export default function MealHistoryScreen() {
   const router = useRouter();
   const [dateOffset, setDateOffset] = useState(0); // 0=today, 1=yesterday, etc.
 
-  const profiles = trpc.profile.list.useQuery(undefined, { retry: false });
-  const profile = profiles.data?.[0];
+  const { activeProfile: profile } = useActiveProfile();
 
-  const targetDate = new Date();
-  targetDate.setDate(targetDate.getDate() - dateOffset);
+  const targetDate = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() - dateOffset);
+    return d;
+  }, [dateOffset]);
 
   const logs = trpc.meal.getDailyLogs.useQuery(
     { profileId: profile?.id ?? '', date: targetDate.toISOString() },

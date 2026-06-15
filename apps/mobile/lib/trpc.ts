@@ -21,6 +21,7 @@ export const trpcClient = trpc.createClient({
   links: [
     httpBatchLink({
       url: `${process.env['EXPO_PUBLIC_API_URL'] ?? 'http://localhost:4000'}/trpc`,
+      maxURLLength: 2048,
       async headers() {
         const token = await getToken();
         return token ? { Authorization: `Bearer ${token}` } : {};

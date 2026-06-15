@@ -6,6 +6,7 @@ import {
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { trpc, queryClient } from '../lib/trpc';
+import { useActiveProfile } from '../hooks/useActiveProfile';
 
 type FeedType = 'breast_milk' | 'formula' | 'solid';
 
@@ -34,9 +35,7 @@ export default function BabyFeedScreen() {
   const [feedType, setFeedType] = useState<FeedType>('breast_milk');
   const [amount, setAmount] = useState('');
 
-  const profiles = trpc.profile.list.useQuery(undefined, { retry: false });
-  const profileList = (profiles.data as any[]) ?? [];
-  const profile = profileList.find((p: any) => p.type === 'baby') ?? profileList[0] ?? null;
+  const { activeProfile: profile } = useActiveProfile();
 
   // eslint-disable-next-line @typescript-eslint/ban-ts-comment
   // @ts-ignore TS2589 — known tRPC deep-inference limit

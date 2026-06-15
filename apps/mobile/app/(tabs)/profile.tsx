@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from '../../hooks/useAuth';
 import { trpc } from '../../lib/trpc';
 import { useNotifications } from '../../hooks/useNotifications';
+import { useActiveProfile } from '../../hooks/useActiveProfile';
 
 const TYPE_COLORS: Record<string, string> = {
   adult: '#2ECC71', senior: '#F59E0B', teen: '#8B5CF6', baby: '#EC4899',
@@ -37,8 +38,7 @@ export default function ProfileScreen() {
   const { logout } = useAuth();
 
   const me = trpc.auth.me.useQuery(undefined, { retry: false });
-  const profiles = trpc.profile.list.useQuery(undefined, { retry: false });
-  const profile = profiles.data?.[0];
+  const { activeProfile: profile, isLoading: profileLoading } = useActiveProfile();
   const subscription = trpc.subscription.getStatus.useQuery(undefined, { retry: false });
   const { sendTestNotification, permission } = useNotifications();
 
@@ -61,7 +61,7 @@ export default function ProfileScreen() {
       <ScrollView showsVerticalScrollIndicator={false}>
         {/* Profile hero */}
         <View style={styles.hero}>
-          {profiles.isLoading ? (
+          {profileLoading ? (
             <ActivityIndicator color="#2ECC71" size="large" />
           ) : (
             <>
@@ -128,13 +128,13 @@ export default function ProfileScreen() {
               icon="person-outline"
               label="Thông tin cá nhân"
               value={profile?.weightKg ? `${profile.weightKg}kg` : undefined}
-              onPress={() => {}}
+              onPress={() => router.push('/profile/edit' as any)}
             />
             <MenuItem
               icon="fitness-outline"
               label="Mục tiêu dinh dưỡng"
               value={goal ? `${goal.toLocaleString()} kcal` : undefined}
-              onPress={() => {}}
+              onPress={() => router.push('/profile/edit' as any)}
             />
             <MenuItem icon="medical-outline" label="Bệnh lý & Chế độ ăn" onPress={() => router.push('/profile/health' as any)} />
           </View>
@@ -149,8 +149,6 @@ export default function ProfileScreen() {
               value={permission === 'granted' ? 'Bật' : 'Tắt'}
               onPress={sendTestNotification}
             />
-            <MenuItem icon="shield-checkmark-outline" label="Quyền riêng tư" onPress={() => {}} />
-            <MenuItem icon="language-outline" label="Ngôn ngữ" value="Tiếng Việt" onPress={() => {}} />
           </View>
         </View>
 

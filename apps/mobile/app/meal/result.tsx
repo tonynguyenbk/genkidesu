@@ -11,6 +11,18 @@ import type { VisionResult, DetectedDish } from '@genki/api';
 
 type EditableDish = DetectedDish & { key: string };
 
+interface FoodItem {
+  id: string;
+  nameVi: string;
+  nameEn: string | null;
+  calPer100g: number;
+  proteinPer100g: number;
+  carbsPer100g: number;
+  fatPer100g: number;
+  typicalPortionG: number | null;
+  category: string | null;
+}
+
 function DishCard({
   dish, index, onRemove, onPortionChange,
 }: {
@@ -112,6 +124,13 @@ export default function MealResultScreen() {
     (scanData.dishes ?? []).map((d, i) => ({ ...d, key: `dish-${i}` })),
   );
 
+  const [showAddManual, setShowAddManual] = useState(false);
+  const [manualQuery, setManualQuery] = useState('');
+  const manualSearch = trpc.food.search.useQuery(
+    { query: manualQuery, limit: 8 },
+    { enabled: manualQuery.trim().length >= 1 },
+  );
+
   const confirm = trpc.meal.confirmLog.useMutation({
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: [['meal', 'getDailySummary']] });
@@ -155,11 +174,34 @@ export default function MealResultScreen() {
     );
   };
 
+  const handleAddManualFood = (food: FoodItem) => {
+    const grams = food.typicalPortionG ?? 100;
+    const ratio = grams / 100;
+    setDishes((prev) => [
+      ...prev,
+      {
+        key: `manual-${Date.now()}`,
+        nameVi: food.nameVi,
+        nameEn: food.nameEn ?? '',
+        portionG: grams,
+        calories: Math.round(food.calPer100g * ratio),
+        proteinG: parseFloat((food.proteinPer100g * ratio).toFixed(1)),
+        carbsG: parseFloat((food.carbsPer100g * ratio).toFixed(1)),
+        fatG: parseFloat((food.fatPer100g * ratio).toFixed(1)),
+        confidence: 1,
+        foodId: food.id,
+      },
+    ]);
+    setManualQuery('');
+    setShowAddManual(false);
+  };
+
   const handleConfirm = () => {
     confirm.mutate({
       profileId: params.profileId!,
       mealType: params.mealType as any,
       imageDataUrl: params.imageUri,
+      rawAiResult: scanData,
       loggedAt: new Date().toISOString(),
       dishes: dishes.map(({ key: _key, confidence: _conf, ...d }) => d),
     });
@@ -272,10 +314,53 @@ export default function MealResultScreen() {
             ))}
 
             {/* Add manual */}
-            <TouchableOpacity style={styles.addManual}>
-              <Ionicons name="add-circle-outline" size={20} color="#2ECC71" />
-              <Text style={styles.addManualText}>Thêm món thủ công</Text>
-            </TouchableOpacity>
+            {!showAddManual ? (
+              <TouchableOpacity style={styles.addManual} onPress={() => setShowAddManual(true)}>
+                <Ionicons name="add-circle-outline" size={20} color="#2ECC71" />
+                <Text style={styles.addManualText}>Thêm món thủ công</Text>
+              </TouchableOpacity>
+            ) : (
+              <View style={styles.addManualPanel}>
+                <View style={styles.addManualSearchRow}>
+                  <Ionicons name="search" size={16} color="#9CA3AF" />
+                  <TextInput
+                    style={styles.addManualInput}
+                    placeholder="Tìm món ăn..."
+                    value={manualQuery}
+                    onChangeText={setManualQuery}
+                    placeholderTextColor="#9CA3AF"
+                    autoFocus
+                  />
+                  <TouchableOpacity onPress={() => { setShowAddManual(false); setManualQuery(''); }}>
+                    <Ionicons name="close" size={18} color="#9CA3AF" />
+                  </TouchableOpacity>
+                </View>
+
+                {manualSearch.isLoading && (
+                  <ActivityIndicator color="#2ECC71" style={{ marginVertical: 12 }} />
+                )}
+
+                {((manualSearch.data ?? []) as FoodItem[]).map((food) => (
+                  <TouchableOpacity
+                    key={food.id}
+                    style={styles.addManualResult}
+                    onPress={() => handleAddManualFood(food)}
+                  >
+                    <View style={{ flex: 1 }}>
+                      <Text style={styles.addManualResultName}>{food.nameVi}</Text>
+                      <Text style={styles.addManualResultSub}>
+                        {food.typicalPortionG ?? 100}g · {Math.round(food.calPer100g * (food.typicalPortionG ?? 100) / 100)} kcal
+                      </Text>
+                    </View>
+                    <Ionicons name="add-circle" size={20} color="#2ECC71" />
+                  </TouchableOpacity>
+                ))}
+
+                {!manualSearch.isLoading && manualQuery.trim().length >= 1 && (manualSearch.data?.length ?? 0) === 0 && (
+                  <Text style={styles.addManualEmpty}>Không tìm thấy "{manualQuery}"</Text>
+                )}
+              </View>
+            )}
 
             {simplifiedMode && (
               <TouchableOpacity style={styles.detailsToggle} onPress={() => setShowDetailsOverride(false)}>
@@ -414,6 +499,23 @@ const styles = StyleSheet.create({
     borderRadius: 14, borderWidth: 1.5, borderColor: '#E5E7EB', borderStyle: 'dashed',
   },
   addManualText: { fontSize: 14, color: '#2ECC71', fontWeight: '600' },
+  addManualPanel: {
+    backgroundColor: '#fff', marginHorizontal: 16, marginTop: 4,
+    borderRadius: 14, borderWidth: 1.5, borderColor: '#E5E7EB', padding: 10,
+  },
+  addManualSearchRow: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    backgroundColor: '#F9FAFB', borderRadius: 10, paddingHorizontal: 10, height: 40,
+  },
+  addManualInput: { flex: 1, fontSize: 14, color: '#111827' },
+  addManualResult: {
+    flexDirection: 'row', alignItems: 'center', gap: 8,
+    paddingVertical: 10, paddingHorizontal: 4,
+    borderTopWidth: 1, borderTopColor: '#F9FAFB',
+  },
+  addManualResultName: { fontSize: 14, fontWeight: '600', color: '#111827' },
+  addManualResultSub: { fontSize: 12, color: '#9CA3AF', marginTop: 1 },
+  addManualEmpty: { fontSize: 13, color: '#9CA3AF', textAlign: 'center', paddingVertical: 12 },
   bottomBar: {
     position: 'absolute', bottom: 0, left: 0, right: 0,
     backgroundColor: '#fff', padding: 16, paddingBottom: Platform.OS === 'ios' ? 32 : 16,

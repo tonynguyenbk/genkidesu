@@ -1,6 +1,16 @@
 import { View, Text, TouchableOpacity, StyleSheet } from 'react-native';
 import { useRouter, usePathname } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import { trpc } from '../lib/trpc';
+import { useActiveProfile } from '../hooks/useActiveProfile';
+
+const TYPE_COLORS: Record<string, string> = {
+  adult: '#2ECC71', senior: '#F59E0B', teen: '#8B5CF6', baby: '#EC4899',
+};
+
+const PLAN_LABELS: Record<string, string> = {
+  free: 'Miễn phí', pro: '👑 Pro', family: '👨‍👩‍👧‍👦 Gia đình',
+};
 
 const NAV_ITEMS = [
   { href: '/(tabs)', label: 'Trang chủ', icon: 'home' as const, activeIcon: 'home' as const },
@@ -13,6 +23,13 @@ const NAV_ITEMS = [
 export function WebSidebar() {
   const router = useRouter();
   const pathname = usePathname();
+
+  const { activeProfile: profile } = useActiveProfile();
+  const subscription = trpc.subscription.getStatus.useQuery(undefined, { retry: false });
+
+  const avatarColor = TYPE_COLORS[profile?.type ?? 'adult'] ?? '#2ECC71';
+  const initial = profile?.name?.[0]?.toUpperCase() ?? 'G';
+  const planLabel = PLAN_LABELS[subscription.data?.plan ?? 'free'] ?? 'Miễn phí';
 
   return (
     <View style={styles.sidebar}>
@@ -52,15 +69,15 @@ export function WebSidebar() {
 
       {/* Bottom */}
       <View style={styles.bottom}>
-        <View style={styles.profileRow}>
-          <View style={styles.profileAvatar}>
-            <Text style={styles.profileAvatarText}>M</Text>
+        <TouchableOpacity style={styles.profileRow} onPress={() => router.push('/(tabs)/profile')}>
+          <View style={[styles.profileAvatar, { backgroundColor: avatarColor }]}>
+            <Text style={styles.profileAvatarText}>{initial}</Text>
           </View>
           <View style={{ flex: 1 }}>
-            <Text style={styles.profileName}>Nguyễn Văn Minh</Text>
-            <Text style={styles.profilePlan}>👑 Pro</Text>
+            <Text style={styles.profileName} numberOfLines={1}>{profile?.name ?? 'Hồ sơ'}</Text>
+            <Text style={styles.profilePlan}>{planLabel}</Text>
           </View>
-        </View>
+        </TouchableOpacity>
       </View>
     </View>
   );

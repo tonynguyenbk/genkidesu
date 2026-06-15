@@ -1,6 +1,8 @@
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, Platform, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { trpc } from '../../lib/trpc';
+import { ProfileSwitcher } from '../../components/ProfileSwitcher';
+import { useActiveProfile } from '../../hooks/useActiveProfile';
 
 function WeekBar({ day, pct, active, cal }: { day: string; pct: number; active: boolean; cal: number }) {
   return (
@@ -35,8 +37,7 @@ function StatCard({ label, value, unit, icon, color, change }: {
 const DAY_NAMES = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
 
 export default function StatsScreen() {
-  const profiles = trpc.profile.list.useQuery(undefined, { retry: false });
-  const profile = profiles.data?.[0];
+  const { activeProfile: profile } = useActiveProfile();
 
   // Build last 7 days
   const today = new Date();
@@ -83,8 +84,11 @@ export default function StatsScreen() {
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
         <View style={styles.header}>
-          <Text style={styles.title}>Thống kê</Text>
-          <Text style={styles.sub}>7 ngày qua</Text>
+          <View style={{ flex: 1, marginRight: 12 }}>
+            <Text style={styles.title}>Thống kê</Text>
+            <Text style={styles.sub}>7 ngày qua</Text>
+          </View>
+          <ProfileSwitcher />
         </View>
 
         {/* Weekly chart */}

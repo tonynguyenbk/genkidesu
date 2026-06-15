@@ -18,20 +18,27 @@ export function ProfileSwitcher() {
   const { activeProfile, setActiveProfile, profiles } = useActiveProfile();
 
   const color = TYPE_COLORS[activeProfile?.type ?? 'adult'] ?? '#2ECC71';
-  const initial = activeProfile?.name?.[0]?.toUpperCase() ?? 'G';
+  // Normalize to ASCII so Vietnamese diacritics (Ô, Ă, Đ…) don't render as
+  // ambiguous glyphs at small sizes inside the avatar circle.
+  const initial = (activeProfile?.name?.[0] ?? 'G')
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toUpperCase();
 
   return (
     <>
       <TouchableOpacity
-        style={[styles.avatar, { backgroundColor: color }]}
+        style={[styles.trigger, { borderColor: color + '30', backgroundColor: color + '10' }]}
         onPress={() => setOpen(true)}
+        activeOpacity={0.7}
       >
-        <Text style={styles.avatarText}>{initial}</Text>
-        {profiles.length > 1 && (
-          <View style={styles.badge}>
-            <Ionicons name="chevron-down" size={8} color="#fff" />
-          </View>
-        )}
+        <View style={[styles.avatar, { backgroundColor: color }]}>
+          <Text style={styles.avatarText}>{initial}</Text>
+        </View>
+        <Text style={[styles.triggerName, { color: color }]} numberOfLines={1}>
+          {activeProfile?.name ?? 'Hồ sơ'}
+        </Text>
+        <Ionicons name="chevron-down" size={13} color={color} />
       </TouchableOpacity>
 
       <Modal
@@ -92,18 +99,18 @@ export function ProfileSwitcher() {
 }
 
 const styles = StyleSheet.create({
+  trigger: {
+    flexDirection: 'row', alignItems: 'center', gap: 7,
+    paddingVertical: 6, paddingLeft: 6, paddingRight: 10,
+    borderRadius: 24, borderWidth: 1.5,
+    maxWidth: 160,
+  },
+  triggerName: { fontSize: 14, fontWeight: '700', flexShrink: 1 },
   avatar: {
-    width: 40, height: 40, borderRadius: 20,
+    width: 30, height: 30, borderRadius: 15,
     justifyContent: 'center', alignItems: 'center',
-    position: 'relative',
   },
-  avatarText: { color: '#fff', fontWeight: '700', fontSize: 16 },
-  badge: {
-    position: 'absolute', bottom: -2, right: -2,
-    backgroundColor: '#111827', borderRadius: 8,
-    width: 14, height: 14, justifyContent: 'center', alignItems: 'center',
-    borderWidth: 1.5, borderColor: '#fff',
-  },
+  avatarText: { color: '#fff', fontWeight: '700', fontSize: 13 },
   overlay: {
     flex: 1, backgroundColor: 'rgba(0,0,0,0.4)',
     justifyContent: 'flex-end',
