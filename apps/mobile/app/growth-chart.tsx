@@ -5,16 +5,24 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import type { Theme } from '@genki/ui';
 import { trpc, queryClient } from '../lib/trpc';
 import { getWhoMedianCurve, type GrowthMetric, type GrowthStatus } from '@genki/shared';
+import { useAppTheme, useThemedStyles } from '../contexts/ThemeContext';
 
-const STATUS_COLOR: Record<GrowthStatus, string> = {
-  severely_low: '#DC2626',
-  low: '#F59E0B',
-  normal: '#16A34A',
-  high: '#F59E0B',
-  severely_high: '#DC2626',
-};
+function getStatusColor(theme: Theme, status: GrowthStatus): string {
+  switch (status) {
+    case 'severely_low':
+    case 'severely_high':
+      return theme.colors.error;
+    case 'low':
+    case 'high':
+      return theme.colors.warning;
+    case 'normal':
+    default:
+      return theme.colors.success;
+  }
+}
 
 function MiniChart({
   metric, gender, points,
@@ -23,6 +31,8 @@ function MiniChart({
   gender: 'male' | 'female' | 'other';
   points: { ageMonths: number; value: number }[];
 }) {
+  const styles = useThemedStyles(createStyles);
+  const { theme } = useAppTheme();
   const curve = getWhoMedianCurve(metric, gender === 'female' ? 'female' : 'male');
   const width = 300;
   const height = 140;
@@ -56,11 +66,11 @@ function MiniChart({
       </View>
       <View style={styles.chartLegend}>
         <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: '#D1D5DB' }]} />
+          <View style={[styles.legendDot, { backgroundColor: theme.colors.textTertiary }]} />
           <Text style={styles.legendText}>Trung vị WHO</Text>
         </View>
         <View style={styles.legendItem}>
-          <View style={[styles.legendDot, { backgroundColor: '#EC4899' }]} />
+          <View style={[styles.legendDot, { backgroundColor: theme.colors.primary }]} />
           <Text style={styles.legendText}>Bé {gender === 'female' ? '(gái)' : '(trai)'}</Text>
         </View>
       </View>
@@ -71,6 +81,8 @@ function MiniChart({
 
 export default function GrowthChartScreen() {
   const router = useRouter();
+  const styles = useThemedStyles(createStyles);
+  const { theme } = useAppTheme();
   const { profileId } = useLocalSearchParams<{ profileId: string }>();
   const [showForm, setShowForm] = useState(false);
   const [heightCm, setHeightCm] = useState('');
@@ -124,11 +136,11 @@ export default function GrowthChartScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={22} color="#111827" />
+          <Ionicons name="arrow-back" size={22} color={theme.colors.text} />
         </TouchableOpacity>
         <Text style={styles.title}>Biểu đồ tăng trưởng</Text>
         <TouchableOpacity onPress={() => setShowForm((s) => !s)} style={styles.addBtn}>
-          <Ionicons name={showForm ? 'close' : 'add'} size={22} color="#EC4899" />
+          <Ionicons name={showForm ? 'close' : 'add'} size={22} color={theme.colors.primary} />
         </TouchableOpacity>
       </View>
 
@@ -149,7 +161,7 @@ export default function GrowthChartScreen() {
                   onChangeText={setHeightCm}
                   keyboardType="decimal-pad"
                   placeholder="VD: 65"
-                  placeholderTextColor="#D1D5DB"
+                  placeholderTextColor={theme.colors.textTertiary}
                 />
               </View>
               <View style={styles.formField}>
@@ -160,7 +172,7 @@ export default function GrowthChartScreen() {
                   onChangeText={setWeightKg}
                   keyboardType="decimal-pad"
                   placeholder="VD: 7.5"
-                  placeholderTextColor="#D1D5DB"
+                  placeholderTextColor={theme.colors.textTertiary}
                 />
               </View>
             </View>
@@ -177,10 +189,10 @@ export default function GrowthChartScreen() {
         )}
 
         {history.isLoading ? (
-          <ActivityIndicator color="#EC4899" style={{ marginTop: 40 }} />
+          <ActivityIndicator color={theme.colors.primary} style={{ marginTop: 40 }} />
         ) : records.length === 0 ? (
           <View style={styles.empty}>
-            <Ionicons name="body-outline" size={40} color="#FBCFE8" />
+            <Ionicons name="body-outline" size={40} color={theme.colors.primary} />
             <Text style={styles.emptyText}>Chưa có số đo nào — bấm “+” để thêm số đo đầu tiên</Text>
           </View>
         ) : (
@@ -188,18 +200,18 @@ export default function GrowthChartScreen() {
             {latest && (
               <View style={styles.assessmentRow}>
                 {latest.heightAssessment && (
-                  <View style={[styles.assessCard, { borderColor: STATUS_COLOR[latest.heightAssessment.status] }]}>
+                  <View style={[styles.assessCard, { borderColor: getStatusColor(theme, latest.heightAssessment.status) }]}>
                     <Text style={styles.assessLabel}>Chiều cao</Text>
-                    <Text style={[styles.assessStatus, { color: STATUS_COLOR[latest.heightAssessment.status] }]}>
+                    <Text style={[styles.assessStatus, { color: getStatusColor(theme, latest.heightAssessment.status) }]}>
                       {latest.heightAssessment.label}
                     </Text>
                     <Text style={styles.assessZ}>Z-score: {latest.heightAssessment.zScore}</Text>
                   </View>
                 )}
                 {latest.weightAssessment && (
-                  <View style={[styles.assessCard, { borderColor: STATUS_COLOR[latest.weightAssessment.status] }]}>
+                  <View style={[styles.assessCard, { borderColor: getStatusColor(theme, latest.weightAssessment.status) }]}>
                     <Text style={styles.assessLabel}>Cân nặng</Text>
-                    <Text style={[styles.assessStatus, { color: STATUS_COLOR[latest.weightAssessment.status] }]}>
+                    <Text style={[styles.assessStatus, { color: getStatusColor(theme, latest.weightAssessment.status) }]}>
                       {latest.weightAssessment.label}
                     </Text>
                     <Text style={styles.assessZ}>Z-score: {latest.weightAssessment.zScore}</Text>
@@ -250,60 +262,62 @@ export default function GrowthChartScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFF5F9' },
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#fff',
-    borderBottomWidth: 1, borderBottomColor: '#FCE7F3',
-  },
-  backBtn: { width: 38, height: 38, justifyContent: 'center', alignItems: 'center' },
-  addBtn: { width: 38, height: 38, justifyContent: 'center', alignItems: 'center' },
-  title: { fontSize: 17, fontWeight: '700', color: '#111827' },
-  content: { padding: 20, gap: 16, paddingBottom: 48 },
-  note: { fontSize: 13, color: '#9CA3AF', lineHeight: 19 },
+function createStyles(theme: Theme) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: theme.colors.background },
+    header: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+      paddingHorizontal: 16, paddingVertical: 12, backgroundColor: theme.colors.surface,
+      borderBottomWidth: 1, borderBottomColor: theme.colors.border,
+    },
+    backBtn: { width: 38, height: 38, justifyContent: 'center', alignItems: 'center' },
+    addBtn: { width: 38, height: 38, justifyContent: 'center', alignItems: 'center' },
+    title: { fontSize: 17, fontWeight: '700', color: theme.colors.text },
+    content: { padding: 20, gap: 16, paddingBottom: 48 },
+    note: { fontSize: 13, color: theme.colors.textTertiary, lineHeight: 19 },
 
-  formCard: { backgroundColor: '#fff', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: '#FCE7F3', gap: 12 },
-  formTitle: { fontSize: 15, fontWeight: '700', color: '#111827' },
-  formRow: { flexDirection: 'row', gap: 12 },
-  formField: { flex: 1 },
-  formLabel: { fontSize: 12, color: '#9CA3AF', marginBottom: 6 },
-  formInput: {
-    borderWidth: 1.5, borderColor: '#FCE7F3', borderRadius: 12,
-    paddingHorizontal: 14, paddingVertical: 10, fontSize: 16, color: '#111827',
-  },
-  submitBtn: { backgroundColor: '#EC4899', borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
-  submitBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+    formCard: { backgroundColor: theme.colors.surface, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: theme.colors.border, gap: 12 },
+    formTitle: { fontSize: 15, fontWeight: '700', color: theme.colors.text },
+    formRow: { flexDirection: 'row', gap: 12 },
+    formField: { flex: 1 },
+    formLabel: { fontSize: 12, color: theme.colors.textTertiary, marginBottom: 6 },
+    formInput: {
+      borderWidth: 1.5, borderColor: theme.colors.border, borderRadius: 12,
+      paddingHorizontal: 14, paddingVertical: 10, fontSize: 16, color: theme.colors.text,
+    },
+    submitBtn: { backgroundColor: theme.colors.primary, borderRadius: 12, paddingVertical: 14, alignItems: 'center' },
+    submitBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
 
-  empty: { alignItems: 'center', gap: 12, paddingVertical: 48 },
-  emptyText: { fontSize: 14, color: '#9CA3AF', textAlign: 'center', paddingHorizontal: 32 },
+    empty: { alignItems: 'center', gap: 12, paddingVertical: 48 },
+    emptyText: { fontSize: 14, color: theme.colors.textTertiary, textAlign: 'center', paddingHorizontal: 32 },
 
-  assessmentRow: { flexDirection: 'row', gap: 12 },
-  assessCard: { flex: 1, backgroundColor: '#fff', borderRadius: 14, borderWidth: 2, padding: 14, gap: 4 },
-  assessLabel: { fontSize: 12, color: '#9CA3AF', fontWeight: '600' },
-  assessStatus: { fontSize: 14, fontWeight: '800' },
-  assessZ: { fontSize: 12, color: '#6B7280' },
+    assessmentRow: { flexDirection: 'row', gap: 12 },
+    assessCard: { flex: 1, backgroundColor: theme.colors.surface, borderRadius: 14, borderWidth: 2, padding: 14, gap: 4 },
+    assessLabel: { fontSize: 12, color: theme.colors.textTertiary, fontWeight: '600' },
+    assessStatus: { fontSize: 14, fontWeight: '800' },
+    assessZ: { fontSize: 12, color: theme.colors.textSecondary },
 
-  section: { gap: 10 },
-  sectionTitle: { fontSize: 15, fontWeight: '700', color: '#111827' },
+    section: { gap: 10 },
+    sectionTitle: { fontSize: 15, fontWeight: '700', color: theme.colors.text },
 
-  chartWrap: { backgroundColor: '#fff', borderRadius: 16, padding: 16, borderWidth: 1, borderColor: '#FCE7F3', alignItems: 'center' },
-  refDot: { position: 'absolute', width: 4, height: 4, borderRadius: 2, backgroundColor: '#D1D5DB' },
-  dataDot: { position: 'absolute', width: 8, height: 8, borderRadius: 4, backgroundColor: '#EC4899', borderWidth: 1.5, borderColor: '#fff' },
-  chartLegend: { flexDirection: 'row', gap: 16, marginTop: 8 },
-  legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  legendDot: { width: 8, height: 8, borderRadius: 4 },
-  legendText: { fontSize: 11, color: '#6B7280' },
-  chartHint: { fontSize: 10, color: '#D1D5DB', marginTop: 4 },
+    chartWrap: { backgroundColor: theme.colors.surface, borderRadius: 16, padding: 16, borderWidth: 1, borderColor: theme.colors.border, alignItems: 'center' },
+    refDot: { position: 'absolute', width: 4, height: 4, borderRadius: 2, backgroundColor: theme.colors.textTertiary },
+    dataDot: { position: 'absolute', width: 8, height: 8, borderRadius: 4, backgroundColor: theme.colors.primary, borderWidth: 1.5, borderColor: theme.colors.surface },
+    chartLegend: { flexDirection: 'row', gap: 16, marginTop: 8 },
+    legendItem: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    legendDot: { width: 8, height: 8, borderRadius: 4 },
+    legendText: { fontSize: 11, color: theme.colors.textSecondary },
+    chartHint: { fontSize: 10, color: theme.colors.textTertiary, marginTop: 4 },
 
-  historyRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: '#fff', borderRadius: 12, padding: 12, marginBottom: 8,
-    borderWidth: 1, borderColor: '#FCE7F3',
-  },
-  historyDate: { fontSize: 12, color: '#6B7280', flex: 1.2 },
-  historyAge: { fontSize: 12, color: '#9CA3AF', flex: 1 },
-  historyVal: { fontSize: 13, fontWeight: '700', color: '#111827', flex: 1, textAlign: 'right' },
+    historyRow: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+      backgroundColor: theme.colors.surface, borderRadius: 12, padding: 12, marginBottom: 8,
+      borderWidth: 1, borderColor: theme.colors.border,
+    },
+    historyDate: { fontSize: 12, color: theme.colors.textSecondary, flex: 1.2 },
+    historyAge: { fontSize: 12, color: theme.colors.textTertiary, flex: 1 },
+    historyVal: { fontSize: 13, fontWeight: '700', color: theme.colors.text, flex: 1, textAlign: 'right' },
 
-  disclaimer: { fontSize: 11, color: '#D1D5DB', lineHeight: 16, fontStyle: 'italic' },
-});
+    disclaimer: { fontSize: 11, color: theme.colors.textTertiary, lineHeight: 16, fontStyle: 'italic' },
+  });
+}

@@ -1,6 +1,7 @@
 import { Tabs } from 'expo-router';
 import { Platform, View, StyleSheet, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useAppTheme } from '../../contexts/ThemeContext';
 
 type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
 
@@ -10,20 +11,21 @@ function TabIcon({ name, color, size }: { name: IoniconName; color: string; size
 
 export default function TabsLayout() {
   const { width } = useWindowDimensions();
+  const { theme } = useAppTheme();
   // Hide tab bar on wide web (sidebar handles nav), show on mobile web (<768px)
   const hideTabBar = Platform.OS === 'web' && width >= 768;
 
   return (
     <Tabs
       screenOptions={{
-        tabBarActiveTintColor: '#2ECC71',
-        tabBarInactiveTintColor: '#9CA3AF',
+        tabBarActiveTintColor: theme.colors.primary,
+        tabBarInactiveTintColor: theme.colors.textTertiary,
         headerShown: false,
         tabBarStyle: hideTabBar
           ? { display: 'none' }
           : {
-              backgroundColor: '#FFFFFF',
-              borderTopColor: '#F3F4F6',
+              backgroundColor: theme.colors.surface,
+              borderTopColor: theme.colors.divider,
               borderTopWidth: 1,
               height: 60,
               paddingBottom: 8,
@@ -44,7 +46,7 @@ export default function TabsLayout() {
         options={{
           title: 'Chụp ảnh',
           tabBarIcon: ({ color, size }) => (
-            <View style={[styles.cameraBtn, { backgroundColor: color === '#9CA3AF' ? '#E5E7EB' : '#2ECC71' }]}>
+            <View style={[styles.cameraBtn, { backgroundColor: color === theme.colors.textTertiary ? theme.colors.border : theme.colors.primary }]}>
               <Ionicons name="camera" size={size - 2} color="#fff" />
             </View>
           ),

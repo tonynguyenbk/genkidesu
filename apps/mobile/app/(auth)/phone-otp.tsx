@@ -5,8 +5,10 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import type { Theme } from '@genki/ui';
 import { trpc } from '../../lib/trpc';
 import { useAuth } from '../../hooks/useAuth';
+import { useAppTheme, useThemedStyles } from '../../contexts/ThemeContext';
 
 type Step = 'phone' | 'otp';
 
@@ -18,6 +20,8 @@ export default function PhoneOTPScreen() {
   const [otp, setOtp] = useState('');
   const [devOtp, setDevOtp] = useState<string | null>(null);
   const inputRef = useRef<TextInput>(null);
+  const { theme } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
 
   const sendOTP = trpc.auth.sendOTP.useMutation({
     onSuccess: (data) => {
@@ -57,7 +61,7 @@ export default function PhoneOTPScreen() {
           onPress={() => step === 'otp' ? setStep('phone') : router.back()}
           style={styles.back}
         >
-          <Ionicons name="arrow-back" size={22} color="#111827" />
+          <Ionicons name="arrow-back" size={22} color={theme.colors.text} />
         </TouchableOpacity>
 
         {step === 'phone' ? (
@@ -76,7 +80,7 @@ export default function PhoneOTPScreen() {
                 value={phone}
                 onChangeText={setPhone}
                 autoFocus
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={theme.colors.textTertiary}
               />
             </View>
 
@@ -100,7 +104,7 @@ export default function PhoneOTPScreen() {
 
             {devOtp && (
               <View style={styles.devBanner}>
-                <Ionicons name="code-slash" size={16} color="#7C3AED" />
+                <Ionicons name="code-slash" size={16} color={theme.colors.info} />
                 <View style={{ flex: 1 }}>
                   <Text style={styles.devLabel}>Dev mode — mã của bạn là:</Text>
                   <Text style={styles.devCode}>{devOtp}</Text>
@@ -117,7 +121,7 @@ export default function PhoneOTPScreen() {
               keyboardType="number-pad"
               maxLength={6}
               placeholder="------"
-              placeholderTextColor="#D1D5DB"
+              placeholderTextColor={theme.colors.textTertiary}
               textAlign="center"
               autoFocus
             />
@@ -146,46 +150,48 @@ export default function PhoneOTPScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  back: { padding: 16 },
-  content: { flex: 1, paddingHorizontal: 24, paddingTop: 8, gap: 20 },
-  title: { fontSize: 28, fontWeight: '800', color: '#111827' },
-  subtitle: { fontSize: 14, color: '#6B7280', marginTop: -12 },
-  bold: { fontWeight: '700', color: '#111827' },
+function createStyles(theme: Theme) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: theme.colors.background },
+    back: { padding: 16 },
+    content: { flex: 1, paddingHorizontal: 24, paddingTop: 8, gap: 20 },
+    title: { fontSize: 28, fontWeight: '800', color: theme.colors.text },
+    subtitle: { fontSize: 14, color: theme.colors.textSecondary, marginTop: -12 },
+    bold: { fontWeight: '700', color: theme.colors.text },
 
-  inputWrapper: {
-    flexDirection: 'row', alignItems: 'center',
-    borderWidth: 1.5, borderColor: '#E5E7EB', borderRadius: 14,
-    backgroundColor: '#F9FAFB', paddingHorizontal: 16, height: 56,
-  },
-  flag: { fontSize: 20, marginRight: 6 },
-  countryCode: { fontSize: 16, fontWeight: '600', color: '#374151', marginRight: 4 },
-  sep: { width: 1, height: 24, backgroundColor: '#E5E7EB', marginHorizontal: 10 },
-  phoneInput: { flex: 1, fontSize: 17, color: '#111827' },
+    inputWrapper: {
+      flexDirection: 'row', alignItems: 'center',
+      borderWidth: 1.5, borderColor: theme.colors.border, borderRadius: 14,
+      backgroundColor: theme.colors.divider, paddingHorizontal: 16, height: 56,
+    },
+    flag: { fontSize: 20, marginRight: 6 },
+    countryCode: { fontSize: 16, fontWeight: '600', color: theme.colors.text, marginRight: 4 },
+    sep: { width: 1, height: 24, backgroundColor: theme.colors.border, marginHorizontal: 10 },
+    phoneInput: { flex: 1, fontSize: 17, color: theme.colors.text },
 
-  devBanner: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    backgroundColor: '#F5F3FF', borderRadius: 14, padding: 14,
-    borderWidth: 1.5, borderColor: '#C4B5FD',
-  },
-  devLabel: { fontSize: 12, color: '#7C3AED', marginBottom: 2 },
-  devCode: { fontSize: 28, fontWeight: '900', color: '#5B21B6', letterSpacing: 6 },
+    devBanner: {
+      flexDirection: 'row', alignItems: 'center', gap: 10,
+      backgroundColor: theme.colors.infoBg, borderRadius: 14, padding: 14,
+      borderWidth: 1.5, borderColor: theme.colors.info,
+    },
+    devLabel: { fontSize: 12, color: theme.colors.info, marginBottom: 2 },
+    devCode: { fontSize: 28, fontWeight: '900', color: theme.colors.info, letterSpacing: 6 },
 
-  otpInput: {
-    borderWidth: 2, borderColor: '#2ECC71', borderRadius: 16,
-    height: 64, fontSize: 32, fontWeight: '800',
-    color: '#111827', backgroundColor: '#F0FDF4',
-    letterSpacing: 12,
-  },
+    otpInput: {
+      borderWidth: 2, borderColor: theme.colors.primary, borderRadius: 16,
+      height: 64, fontSize: 32, fontWeight: '800',
+      color: theme.colors.text, backgroundColor: theme.colors.surfaceAlt,
+      letterSpacing: 12,
+    },
 
-  btn: {
-    backgroundColor: '#2ECC71', padding: 17, borderRadius: 14, alignItems: 'center',
-    shadowColor: '#2ECC71', shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
-  },
-  btnDisabled: { backgroundColor: '#D1D5DB', shadowOpacity: 0 },
-  btnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+    btn: {
+      backgroundColor: theme.colors.primary, padding: 17, borderRadius: 14, alignItems: 'center',
+      shadowColor: theme.colors.primary, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
+    },
+    btnDisabled: { backgroundColor: theme.colors.textTertiary, shadowOpacity: 0 },
+    btnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 
-  resendBtn: { alignItems: 'center' },
-  resendText: { fontSize: 14, color: '#2ECC71', fontWeight: '600' },
-});
+    resendBtn: { alignItems: 'center' },
+    resendText: { fontSize: 14, color: theme.colors.primary, fontWeight: '600' },
+  });
+}

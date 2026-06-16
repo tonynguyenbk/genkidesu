@@ -5,8 +5,10 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import type { Theme } from '@genki/ui';
 import { trpc, queryClient } from '../../lib/trpc';
 import { useActiveProfile } from '../../hooks/useActiveProfile';
+import { useAppTheme, useThemedStyles } from '../../contexts/ThemeContext';
 
 const ACTIVITY_LEVELS = [
   { value: 1, label: 'Ít vận động', sub: 'Ngồi văn phòng cả ngày' },
@@ -16,16 +18,18 @@ const ACTIVITY_LEVELS = [
   { value: 5, label: 'Rất nhiều', sub: 'Vận động viên chuyên nghiệp' },
 ];
 
-const TARGET_FIELDS = [
-  { key: 'calories', label: 'Calories', unit: 'kcal', color: '#2ECC71' },
-  { key: 'protein_g', label: 'Protein', unit: 'g', color: '#3B82F6' },
-  { key: 'carbs_g', label: 'Carbs', unit: 'g', color: '#F59E0B' },
-  { key: 'fat_g', label: 'Fat', unit: 'g', color: '#EF4444' },
-] as const;
-
 export default function EditProfileScreen() {
   const router = useRouter();
+  const { theme } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
   const { activeProfile: profile, isLoading } = useActiveProfile();
+
+  const TARGET_FIELDS = [
+    { key: 'calories', label: 'Calories', unit: 'kcal', color: theme.colors.primary },
+    { key: 'protein_g', label: 'Protein', unit: 'g', color: theme.colors.info },
+    { key: 'carbs_g', label: 'Carbs', unit: 'g', color: theme.colors.warning },
+    { key: 'fat_g', label: 'Fat', unit: 'g', color: theme.colors.error },
+  ] as const;
 
   const [name, setName] = useState('');
   const [heightCm, setHeightCm] = useState('');
@@ -64,7 +68,7 @@ export default function EditProfileScreen() {
   if (isLoading || !profile) {
     return (
       <SafeAreaView style={styles.container}>
-        <ActivityIndicator color="#2ECC71" style={{ marginTop: 60 }} />
+        <ActivityIndicator color={theme.colors.primary} style={{ marginTop: 60 }} />
       </SafeAreaView>
     );
   }
@@ -75,7 +79,7 @@ export default function EditProfileScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={22} color="#111827" />
+          <Ionicons name="arrow-back" size={22} color={theme.colors.text} />
         </TouchableOpacity>
         <Text style={styles.title}>Chỉnh sửa hồ sơ</Text>
         <View style={{ width: 38 }} />
@@ -92,7 +96,7 @@ export default function EditProfileScreen() {
               value={name}
               onChangeText={setName}
               placeholder="Tên của bạn"
-              placeholderTextColor="#9CA3AF"
+              placeholderTextColor={theme.colors.textTertiary}
             />
           </View>
 
@@ -105,7 +109,7 @@ export default function EditProfileScreen() {
                 onChangeText={setHeightCm}
                 keyboardType="decimal-pad"
                 placeholder="170"
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={theme.colors.textTertiary}
               />
             </View>
             <View style={{ width: 12 }} />
@@ -117,7 +121,7 @@ export default function EditProfileScreen() {
                 onChangeText={setWeightKg}
                 keyboardType="decimal-pad"
                 placeholder="65"
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={theme.colors.textTertiary}
               />
             </View>
           </View>
@@ -184,57 +188,59 @@ export default function EditProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FBF9' },
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 14,
-    borderBottomWidth: 1, borderBottomColor: '#F3F4F6',
-    backgroundColor: '#fff',
-  },
-  backBtn: { width: 38, height: 38, justifyContent: 'center' },
-  title: { fontSize: 17, fontWeight: '700', color: '#111827' },
-  section: { paddingHorizontal: 20, paddingTop: 20, gap: 14 },
-  sectionTitle: { fontSize: 16, fontWeight: '800', color: '#111827' },
-  sectionNote: { fontSize: 12, color: '#9CA3AF', marginTop: -8, lineHeight: 18 },
-  field: { gap: 8 },
-  label: { fontSize: 14, fontWeight: '600', color: '#374151' },
-  input: {
-    borderWidth: 1.5, borderColor: '#E5E7EB', borderRadius: 12,
-    padding: 14, fontSize: 16, color: '#111827', backgroundColor: '#fff',
-  },
-  row: { flexDirection: 'row' },
-  activityRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    padding: 12, borderRadius: 12, borderWidth: 1.5, borderColor: '#F3F4F6',
-    backgroundColor: '#fff',
-  },
-  activityRowActive: { borderColor: '#2ECC71', backgroundColor: '#F0FDF4' },
-  radio: {
-    width: 20, height: 20, borderRadius: 10,
-    borderWidth: 2, borderColor: '#D1D5DB',
-    justifyContent: 'center', alignItems: 'center',
-  },
-  radioActive: { borderColor: '#2ECC71' },
-  radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#2ECC71' },
-  activityLabel: { fontSize: 14, fontWeight: '600', color: '#374151' },
-  activityLabelActive: { color: '#2ECC71' },
-  activitySub: { fontSize: 12, color: '#9CA3AF', marginTop: 1 },
-  targetsCard: {
-    backgroundColor: '#fff', borderRadius: 16, padding: 16,
-    shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 2,
-  },
-  targetRow: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#F9FAFB',
-  },
-  targetLabel: { fontSize: 14, color: '#6B7280' },
-  targetValue: { fontSize: 15, fontWeight: '700', color: '#111827' },
-  saveBtn: {
-    backgroundColor: '#2ECC71', marginHorizontal: 20, marginTop: 24,
-    padding: 17, borderRadius: 14, alignItems: 'center',
-    shadowColor: '#2ECC71', shadowOpacity: 0.25, shadowRadius: 8, elevation: 3,
-  },
-  saveBtnDisabled: { opacity: 0.6 },
-  saveBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-});
+function createStyles(theme: Theme) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: theme.colors.background },
+    header: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+      paddingHorizontal: 16, paddingVertical: 14,
+      borderBottomWidth: 1, borderBottomColor: theme.colors.divider,
+      backgroundColor: theme.colors.surface,
+    },
+    backBtn: { width: 38, height: 38, justifyContent: 'center' },
+    title: { fontSize: 17, fontWeight: '700', color: theme.colors.text },
+    section: { paddingHorizontal: 20, paddingTop: 20, gap: 14 },
+    sectionTitle: { fontSize: 16, fontWeight: '800', color: theme.colors.text },
+    sectionNote: { fontSize: 12, color: theme.colors.textTertiary, marginTop: -8, lineHeight: 18 },
+    field: { gap: 8 },
+    label: { fontSize: 14, fontWeight: '600', color: theme.colors.text },
+    input: {
+      borderWidth: 1.5, borderColor: theme.colors.border, borderRadius: 12,
+      padding: 14, fontSize: 16, color: theme.colors.text, backgroundColor: theme.colors.surface,
+    },
+    row: { flexDirection: 'row' },
+    activityRow: {
+      flexDirection: 'row', alignItems: 'center', gap: 12,
+      padding: 12, borderRadius: 12, borderWidth: 1.5, borderColor: theme.colors.divider,
+      backgroundColor: theme.colors.surface,
+    },
+    activityRowActive: { borderColor: theme.colors.primary, backgroundColor: theme.colors.surfaceAlt },
+    radio: {
+      width: 20, height: 20, borderRadius: 10,
+      borderWidth: 2, borderColor: theme.colors.textTertiary,
+      justifyContent: 'center', alignItems: 'center',
+    },
+    radioActive: { borderColor: theme.colors.primary },
+    radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: theme.colors.primary },
+    activityLabel: { fontSize: 14, fontWeight: '600', color: theme.colors.text },
+    activityLabelActive: { color: theme.colors.primary },
+    activitySub: { fontSize: 12, color: theme.colors.textTertiary, marginTop: 1 },
+    targetsCard: {
+      backgroundColor: theme.colors.surface, borderRadius: 16, padding: 16,
+      shadowColor: theme.colors.shadow, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2,
+    },
+    targetRow: {
+      flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+      paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: theme.colors.divider,
+    },
+    targetLabel: { fontSize: 14, color: theme.colors.textSecondary },
+    targetValue: { fontSize: 15, fontWeight: '700', color: theme.colors.text },
+    saveBtn: {
+      backgroundColor: theme.colors.primary, marginHorizontal: 20, marginTop: 24,
+      padding: 17, borderRadius: 14, alignItems: 'center',
+      shadowColor: theme.colors.primary, shadowOpacity: 0.25, shadowRadius: 8, elevation: 3,
+    },
+    saveBtnDisabled: { opacity: 0.6 },
+    saveBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  });
+}

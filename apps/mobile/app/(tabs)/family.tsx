@@ -7,6 +7,8 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Clipboard from 'expo-clipboard';
 import { trpc } from '../../lib/trpc';
+import type { Theme } from '@genki/ui';
+import { useAppTheme, useThemedStyles } from '../../contexts/ThemeContext';
 
 const TYPE_COLORS: Record<string, string> = {
   adult: '#2ECC71', senior: '#F59E0B', teen: '#8B5CF6', baby: '#EC4899',
@@ -14,8 +16,6 @@ const TYPE_COLORS: Record<string, string> = {
 const TYPE_LABELS: Record<string, string> = {
   adult: 'Người lớn', baby: 'Em bé', teen: 'Thiếu niên', senior: 'Người cao tuổi',
 };
-const SEVERITY_COLORS = { info: '#3B82F6', warning: '#F59E0B', danger: '#EF4444' };
-const SEVERITY_BG = { info: '#EFF6FF', warning: '#FFFBEB', danger: '#FEF2F2' };
 const SEVERITY_ICONS: Record<string, string> = {
   info: 'information-circle-outline',
   warning: 'alert-circle-outline',
@@ -32,7 +32,12 @@ type Alert = {
 
 function AlertBanner({ alerts }: { alerts: Alert[] }) {
   const [expanded, setExpanded] = useState(false);
+  const { theme } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
   if (alerts.length === 0) return null;
+
+  const SEVERITY_COLORS = { info: theme.colors.info, warning: theme.colors.warning, danger: theme.colors.error };
+  const SEVERITY_BG = { info: theme.colors.infoBg, warning: theme.colors.warningBg, danger: theme.colors.errorBg };
 
   const shown = expanded ? alerts : alerts.slice(0, 2);
   const dangerCount = alerts.filter((a) => a.severity === 'danger').length;
@@ -46,13 +51,13 @@ function AlertBanner({ alerts }: { alerts: Alert[] }) {
         activeOpacity={0.8}
       >
         <View style={styles.alertHeaderLeft}>
-          <Ionicons name="notifications" size={16} color="#F59E0B" />
+          <Ionicons name="notifications" size={16} color={theme.colors.warning} />
           <Text style={styles.alertHeaderText}>
             {dangerCount > 0 ? `${dangerCount} cảnh báo · ` : ''}
             {warnCount > 0 ? `${warnCount} lưu ý` : `${alerts.length} thông báo`}
           </Text>
         </View>
-        <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={15} color="#9CA3AF" />
+        <Ionicons name={expanded ? 'chevron-up' : 'chevron-down'} size={15} color={theme.colors.textTertiary} />
       </TouchableOpacity>
 
       {shown.map((alert, i) => {
@@ -79,6 +84,8 @@ function AlertBanner({ alerts }: { alerts: Alert[] }) {
 }
 
 function FamilyOverviewCard({ members }: { members: any[] }) {
+  const { theme } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
   const visibleMembers = members.filter(
     (m) => (m.privacySettings as any)?.show_details_to_family !== false,
   );
@@ -115,7 +122,7 @@ function FamilyOverviewCard({ members }: { members: any[] }) {
         </View>
         <View style={styles.overviewDivider} />
         <View style={styles.overviewStat}>
-          <Text style={[styles.overviewVal, { color: '#2ECC71' }]}>{onTrack}/{visibleMembers.length}</Text>
+          <Text style={[styles.overviewVal, { color: theme.colors.primary }]}>{onTrack}/{visibleMembers.length}</Text>
           <Text style={styles.overviewLabel}>đạt mục tiêu</Text>
         </View>
       </View>
@@ -127,6 +134,7 @@ function FamilyOverviewCard({ members }: { members: any[] }) {
 }
 
 function MacroBar({ label, value, max, color }: { label: string; value: number; max: number; color: string }) {
+  const styles = useThemedStyles(createStyles);
   const pct = max > 0 ? Math.min((value / max) * 100, 100) : 0;
   return (
     <View style={styles.macroRow}>
@@ -140,8 +148,10 @@ function MacroBar({ label, value, max, color }: { label: string; value: number; 
 }
 
 function MemberCard({ member, onPress }: { member: Record<string, any>; onPress: () => void }) {
+  const { theme } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
   const profile = member.profile as Record<string, any>;
-  const color = TYPE_COLORS[profile.type as string] ?? '#2ECC71';
+  const color = TYPE_COLORS[profile.type as string] ?? theme.colors.primary;
   const todaySummary = (profile.dailySummaries as any[])?.[0];
   const caloriesEaten = (todaySummary?.totalCalories as number) ?? 0;
   const caloriesGoal =
@@ -190,21 +200,23 @@ function MemberCard({ member, onPress }: { member: Record<string, any>; onPress:
 
             {(proteinG > 0 || carbsG > 0 || fatG > 0) && (
               <View style={styles.macrosSection}>
-                <MacroBar label="P" value={proteinG} max={proteinGoal} color="#3B82F6" />
-                <MacroBar label="C" value={carbsG} max={carbsGoal} color="#F59E0B" />
-                <MacroBar label="F" value={fatG} max={fatGoal} color="#EF4444" />
+                <MacroBar label="P" value={proteinG} max={proteinGoal} color={theme.colors.info} />
+                <MacroBar label="C" value={carbsG} max={carbsGoal} color={theme.colors.warning} />
+                <MacroBar label="F" value={fatG} max={fatGoal} color={theme.colors.error} />
               </View>
             )}
           </>
         )}
       </View>
-      <Ionicons name="chevron-forward" size={16} color="#D1D5DB" style={{ alignSelf: 'center' }} />
+      <Ionicons name="chevron-forward" size={16} color={theme.colors.textTertiary} style={{ alignSelf: 'center' }} />
     </TouchableOpacity>
   );
 }
 
 function EmptyState() {
   const router = useRouter();
+  const { theme } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
   return (
     <View style={styles.emptyState}>
       <Text style={styles.emptyEmoji}>👨‍👩‍👧‍👦</Text>
@@ -215,7 +227,7 @@ function EmptyState() {
         <Text style={styles.createBtnText}>Tạo gia đình</Text>
       </TouchableOpacity>
       <TouchableOpacity style={styles.joinBtn} onPress={() => router.push('/family/join')}>
-        <Ionicons name="link-outline" size={18} color="#2ECC71" />
+        <Ionicons name="link-outline" size={18} color={theme.colors.primary} />
         <Text style={styles.joinBtnText}>Tham gia bằng mã mời</Text>
       </TouchableOpacity>
     </View>
@@ -224,6 +236,8 @@ function EmptyState() {
 
 export default function FamilyScreen() {
   const router = useRouter();
+  const { theme } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
   const [copied, setCopied] = useState(false);
   const [showAddProfile, setShowAddProfile] = useState(false);
 
@@ -265,7 +279,7 @@ export default function FamilyScreen() {
   if (families.isLoading) {
     return (
       <SafeAreaView style={styles.container}>
-        <ActivityIndicator color="#2ECC71" style={{ marginTop: 80 }} />
+        <ActivityIndicator color={theme.colors.primary} style={{ marginTop: 80 }} />
       </SafeAreaView>
     );
   }
@@ -292,7 +306,7 @@ export default function FamilyScreen() {
                 style={styles.addBtn}
                 onPress={() => router.push('/profile/create')}
               >
-                <Ionicons name="person-add-outline" size={18} color="#2ECC71" />
+                <Ionicons name="person-add-outline" size={18} color={theme.colors.primary} />
               </TouchableOpacity>
             </View>
 
@@ -312,9 +326,9 @@ export default function FamilyScreen() {
                 <Ionicons
                   name={copied ? 'checkmark-circle' : 'copy-outline'}
                   size={15}
-                  color={copied ? '#2ECC71' : '#6B7280'}
+                  color={copied ? theme.colors.primary : theme.colors.textSecondary}
                 />
-                <Text style={[styles.copyText, copied && { color: '#2ECC71' }]}>
+                <Text style={[styles.copyText, copied && { color: theme.colors.primary }]}>
                   {copied ? 'Đã sao chép' : 'Sao chép'}
                 </Text>
               </View>
@@ -324,7 +338,7 @@ export default function FamilyScreen() {
             <View style={styles.section}>
               <Text style={styles.sectionTitle}>Tổng quan hôm nay</Text>
               {dashboard.isLoading ? (
-                <ActivityIndicator color="#2ECC71" style={{ marginVertical: 24 }} />
+                <ActivityIndicator color={theme.colors.primary} style={{ marginVertical: 24 }} />
               ) : members.length === 0 ? (
                 <Text style={styles.noMembers}>Chưa có thành viên nào</Text>
               ) : (
@@ -344,15 +358,15 @@ export default function FamilyScreen() {
                 style={styles.actionBtn}
                 onPress={handleCopyCode}
               >
-                <Ionicons name={copied ? 'checkmark-circle' : 'share-outline'} size={18} color="#2ECC71" />
+                <Ionicons name={copied ? 'checkmark-circle' : 'share-outline'} size={18} color={theme.colors.primary} />
                 <Text style={styles.actionText}>{copied ? 'Đã sao chép!' : 'Chia sẻ mã mời'}</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.actionBtn, styles.actionBtnSec]}
                 onPress={() => unaddedProfiles.length > 0 ? setShowAddProfile(true) : router.push('/profile/create')}
               >
-                <Ionicons name="add-circle-outline" size={18} color="#6B7280" />
-                <Text style={[styles.actionText, { color: '#6B7280' }]}>Thêm hồ sơ</Text>
+                <Ionicons name="add-circle-outline" size={18} color={theme.colors.textSecondary} />
+                <Text style={[styles.actionText, { color: theme.colors.textSecondary }]}>Thêm hồ sơ</Text>
               </TouchableOpacity>
             </View>
           </>
@@ -367,24 +381,24 @@ export default function FamilyScreen() {
             <View style={styles.sheetHeader}>
               <Text style={styles.sheetTitle}>Thêm vào gia đình</Text>
               <TouchableOpacity onPress={() => setShowAddProfile(false)}>
-                <Ionicons name="close" size={22} color="#6B7280" />
+                <Ionicons name="close" size={22} color={theme.colors.textSecondary} />
               </TouchableOpacity>
             </View>
             <ScrollView>
               {unaddedProfiles.length === 0 ? (
                 <View style={{ padding: 24, alignItems: 'center' }}>
-                  <Text style={{ color: '#9CA3AF', fontSize: 14 }}>Tất cả hồ sơ đã trong gia đình</Text>
+                  <Text style={{ color: theme.colors.textTertiary, fontSize: 14 }}>Tất cả hồ sơ đã trong gia đình</Text>
                   <TouchableOpacity
                     style={[styles.actionBtn, { marginTop: 16, paddingHorizontal: 24 }]}
                     onPress={() => { setShowAddProfile(false); router.push('/profile/create'); }}
                   >
-                    <Ionicons name="add-circle-outline" size={16} color="#2ECC71" />
+                    <Ionicons name="add-circle-outline" size={16} color={theme.colors.primary} />
                     <Text style={styles.actionText}>Tạo hồ sơ mới</Text>
                   </TouchableOpacity>
                 </View>
               ) : (
                 unaddedProfiles.map((p) => {
-                  const color = TYPE_COLORS[p.type] ?? '#2ECC71';
+                  const color = TYPE_COLORS[p.type] ?? theme.colors.primary;
                   return (
                     <TouchableOpacity
                       key={p.id}
@@ -404,7 +418,7 @@ export default function FamilyScreen() {
                         <Text style={styles.profileOptionName}>{p.name}</Text>
                         <Text style={styles.profileOptionType}>{TYPE_LABELS[p.type] ?? p.type}</Text>
                       </View>
-                      <Ionicons name="add-circle-outline" size={22} color="#2ECC71" />
+                      <Ionicons name="add-circle-outline" size={22} color={theme.colors.primary} />
                     </TouchableOpacity>
                   );
                 })
@@ -418,154 +432,156 @@ export default function FamilyScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FBF9' },
-  header: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: 20, paddingTop: Platform.OS === 'web' ? 20 : 8, paddingBottom: 12,
-  },
-  title: { fontSize: 22, fontWeight: '800', color: '#111827' },
-  sub: { fontSize: 13, color: '#9CA3AF', marginTop: 2 },
-  addBtn: {
-    width: 40, height: 40, borderRadius: 20,
-    backgroundColor: '#F0FDF4', justifyContent: 'center', alignItems: 'center',
-  },
+function createStyles(theme: Theme) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: theme.colors.background },
+    header: {
+      flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+      paddingHorizontal: 20, paddingTop: Platform.OS === 'web' ? 20 : 8, paddingBottom: 12,
+    },
+    title: { fontSize: 22, fontWeight: '800', color: theme.colors.text },
+    sub: { fontSize: 13, color: theme.colors.textTertiary, marginTop: 2 },
+    addBtn: {
+      width: 40, height: 40, borderRadius: 20,
+      backgroundColor: theme.colors.surfaceAlt, justifyContent: 'center', alignItems: 'center',
+    },
 
-  // Overview card
-  overviewCard: {
-    backgroundColor: '#fff', borderRadius: 20, marginHorizontal: 16, marginBottom: 16,
-    padding: 16, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8, elevation: 2,
-  },
-  overviewTitle: { fontSize: 13, fontWeight: '600', color: '#9CA3AF', marginBottom: 12 },
-  overviewRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  overviewStat: { flex: 1, alignItems: 'center' },
-  overviewVal: { fontSize: 20, fontWeight: '800', color: '#111827' },
-  overviewLabel: { fontSize: 11, color: '#9CA3AF', marginTop: 2, textAlign: 'center' },
-  overviewDivider: { width: 1, height: 36, backgroundColor: '#F3F4F6' },
-  overviewBarBg: {
-    height: 6, backgroundColor: '#F3F4F6', borderRadius: 3, overflow: 'hidden',
-  },
-  overviewBarFill: { height: 6, backgroundColor: '#2ECC71', borderRadius: 3 },
+    // Overview card
+    overviewCard: {
+      backgroundColor: theme.colors.surface, borderRadius: 20, marginHorizontal: 16, marginBottom: 16,
+      padding: 16, shadowColor: theme.colors.shadow, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2,
+    },
+    overviewTitle: { fontSize: 13, fontWeight: '600', color: theme.colors.textTertiary, marginBottom: 12 },
+    overviewRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+    overviewStat: { flex: 1, alignItems: 'center' },
+    overviewVal: { fontSize: 20, fontWeight: '800', color: theme.colors.text },
+    overviewLabel: { fontSize: 11, color: theme.colors.textTertiary, marginTop: 2, textAlign: 'center' },
+    overviewDivider: { width: 1, height: 36, backgroundColor: theme.colors.divider },
+    overviewBarBg: {
+      height: 6, backgroundColor: theme.colors.divider, borderRadius: 3, overflow: 'hidden',
+    },
+    overviewBarFill: { height: 6, backgroundColor: theme.colors.primary, borderRadius: 3 },
 
-  // Alerts
-  alertSection: {
-    marginHorizontal: 16, marginBottom: 16,
-    backgroundColor: '#fff', borderRadius: 16, overflow: 'hidden',
-    shadowColor: '#000', shadowOpacity: 0.03, shadowRadius: 6, elevation: 1,
-  },
-  alertHeader: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    padding: 12, borderBottomWidth: 1, borderBottomColor: '#F3F4F6',
-  },
-  alertHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  alertHeaderText: { fontSize: 13, fontWeight: '600', color: '#374151' },
-  alertRow: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: 8,
-    paddingHorizontal: 12, paddingVertical: 10,
-    borderLeftWidth: 3,
-  },
-  alertText: { fontSize: 13, flex: 1, lineHeight: 18, fontWeight: '500' },
-  alertMore: {
-    fontSize: 12, color: '#6B7280', textAlign: 'center',
-    paddingVertical: 8, borderTopWidth: 1, borderTopColor: '#F3F4F6',
-  },
+    // Alerts
+    alertSection: {
+      marginHorizontal: 16, marginBottom: 16,
+      backgroundColor: theme.colors.surface, borderRadius: 16, overflow: 'hidden',
+      shadowColor: theme.colors.shadow, shadowOpacity: 0.03, shadowRadius: 6, elevation: 1,
+    },
+    alertHeader: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+      padding: 12, borderBottomWidth: 1, borderBottomColor: theme.colors.divider,
+    },
+    alertHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    alertHeaderText: { fontSize: 13, fontWeight: '600', color: theme.colors.text },
+    alertRow: {
+      flexDirection: 'row', alignItems: 'flex-start', gap: 8,
+      paddingHorizontal: 12, paddingVertical: 10,
+      borderLeftWidth: 3,
+    },
+    alertText: { fontSize: 13, flex: 1, lineHeight: 18, fontWeight: '500' },
+    alertMore: {
+      fontSize: 12, color: theme.colors.textSecondary, textAlign: 'center',
+      paddingVertical: 8, borderTopWidth: 1, borderTopColor: theme.colors.divider,
+    },
 
-  // Invite
-  inviteBanner: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: '#F0FDF4', borderRadius: 16, marginHorizontal: 16, marginBottom: 16,
-    padding: 16, borderWidth: 1, borderColor: '#BBF7D0',
-  },
-  inviteLabel: { fontSize: 11, color: '#6B7280', marginBottom: 4 },
-  inviteCode: { fontSize: 24, fontWeight: '800', color: '#2ECC71', letterSpacing: 6 },
-  copyChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
-    backgroundColor: '#fff', paddingHorizontal: 12, paddingVertical: 6,
-    borderRadius: 20, borderWidth: 1, borderColor: '#E5E7EB',
-  },
-  copyText: { fontSize: 12, color: '#6B7280', fontWeight: '500' },
+    // Invite
+    inviteBanner: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+      backgroundColor: theme.colors.surfaceAlt, borderRadius: 16, marginHorizontal: 16, marginBottom: 16,
+      padding: 16, borderWidth: 1, borderColor: theme.colors.successBg,
+    },
+    inviteLabel: { fontSize: 11, color: theme.colors.textSecondary, marginBottom: 4 },
+    inviteCode: { fontSize: 24, fontWeight: '800', color: theme.colors.primary, letterSpacing: 6 },
+    copyChip: {
+      flexDirection: 'row', alignItems: 'center', gap: 4,
+      backgroundColor: theme.colors.surface, paddingHorizontal: 12, paddingVertical: 6,
+      borderRadius: 20, borderWidth: 1, borderColor: theme.colors.border,
+    },
+    copyText: { fontSize: 12, color: theme.colors.textSecondary, fontWeight: '500' },
 
-  // Members
-  section: { paddingHorizontal: 16, gap: 10, marginBottom: 16 },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#111827', marginBottom: 4 },
-  noMembers: { fontSize: 14, color: '#9CA3AF', textAlign: 'center', paddingVertical: 20 },
-  memberCard: {
-    backgroundColor: '#fff', borderRadius: 16, padding: 14,
-    flexDirection: 'row', gap: 12,
-    shadowColor: '#000', shadowOpacity: 0.03, shadowRadius: 6, elevation: 1,
-  },
-  memberAvatar: {
-    width: 46, height: 46, borderRadius: 23,
-    justifyContent: 'center', alignItems: 'center',
-  },
-  memberAvatarText: { fontSize: 18, fontWeight: '700' },
-  memberTop: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start',
-    marginBottom: 6,
-  },
-  memberName: { fontSize: 14, fontWeight: '700', color: '#111827' },
-  memberType: { fontSize: 11, color: '#9CA3AF', marginTop: 2 },
-  memberCal: { fontSize: 14, fontWeight: '700' },
-  mealCountLabel: { fontSize: 11, color: '#9CA3AF', marginTop: 1, textAlign: 'right' },
-  privateLabel: { fontSize: 12, color: '#9CA3AF' },
-  memberBar: {
-    height: 4, backgroundColor: '#F3F4F6', borderRadius: 2,
-    overflow: 'hidden', marginBottom: 3,
-  },
-  memberBarFill: { height: 4, borderRadius: 2 },
-  memberPct: { fontSize: 11, color: '#9CA3AF', marginBottom: 6 },
+    // Members
+    section: { paddingHorizontal: 16, gap: 10, marginBottom: 16 },
+    sectionTitle: { fontSize: 16, fontWeight: '700', color: theme.colors.text, marginBottom: 4 },
+    noMembers: { fontSize: 14, color: theme.colors.textTertiary, textAlign: 'center', paddingVertical: 20 },
+    memberCard: {
+      backgroundColor: theme.colors.surface, borderRadius: 16, padding: 14,
+      flexDirection: 'row', gap: 12,
+      shadowColor: theme.colors.shadow, shadowOpacity: 0.03, shadowRadius: 6, elevation: 1,
+    },
+    memberAvatar: {
+      width: 46, height: 46, borderRadius: 23,
+      justifyContent: 'center', alignItems: 'center',
+    },
+    memberAvatarText: { fontSize: 18, fontWeight: '700' },
+    memberTop: {
+      flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start',
+      marginBottom: 6,
+    },
+    memberName: { fontSize: 14, fontWeight: '700', color: theme.colors.text },
+    memberType: { fontSize: 11, color: theme.colors.textTertiary, marginTop: 2 },
+    memberCal: { fontSize: 14, fontWeight: '700' },
+    mealCountLabel: { fontSize: 11, color: theme.colors.textTertiary, marginTop: 1, textAlign: 'right' },
+    privateLabel: { fontSize: 12, color: theme.colors.textTertiary },
+    memberBar: {
+      height: 4, backgroundColor: theme.colors.divider, borderRadius: 2,
+      overflow: 'hidden', marginBottom: 3,
+    },
+    memberBarFill: { height: 4, borderRadius: 2 },
+    memberPct: { fontSize: 11, color: theme.colors.textTertiary, marginBottom: 6 },
 
-  // Macros
-  macrosSection: { gap: 3 },
-  macroRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
-  macroLabel: { fontSize: 10, fontWeight: '700', color: '#9CA3AF', width: 12 },
-  macroBarBg: { flex: 1, height: 3, backgroundColor: '#F3F4F6', borderRadius: 2, overflow: 'hidden' },
-  macroBarFill: { height: 3, borderRadius: 2 },
-  macroVal: { fontSize: 10, color: '#9CA3AF', width: 32, textAlign: 'right' },
+    // Macros
+    macrosSection: { gap: 3 },
+    macroRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+    macroLabel: { fontSize: 10, fontWeight: '700', color: theme.colors.textTertiary, width: 12 },
+    macroBarBg: { flex: 1, height: 3, backgroundColor: theme.colors.divider, borderRadius: 2, overflow: 'hidden' },
+    macroBarFill: { height: 3, borderRadius: 2 },
+    macroVal: { fontSize: 10, color: theme.colors.textTertiary, width: 32, textAlign: 'right' },
 
-  // Actions
-  actions: { flexDirection: 'row', gap: 12, paddingHorizontal: 16, marginBottom: 16 },
-  actionBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: '#F0FDF4', padding: 14, borderRadius: 14, borderWidth: 1, borderColor: '#2ECC71',
-  },
-  actionBtnSec: { backgroundColor: '#F9FAFB', borderColor: '#E5E7EB' },
-  actionText: { fontSize: 14, fontWeight: '600', color: '#2ECC71' },
+    // Actions
+    actions: { flexDirection: 'row', gap: 12, paddingHorizontal: 16, marginBottom: 16 },
+    actionBtn: {
+      flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+      backgroundColor: theme.colors.surfaceAlt, padding: 14, borderRadius: 14, borderWidth: 1, borderColor: theme.colors.primary,
+    },
+    actionBtnSec: { backgroundColor: theme.colors.divider, borderColor: theme.colors.border },
+    actionText: { fontSize: 14, fontWeight: '600', color: theme.colors.primary },
 
-  // Add profile modal
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
-  sheet: { backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingBottom: 32, maxHeight: '70%' },
-  sheetHeader: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    padding: 20, borderBottomWidth: 1, borderBottomColor: '#F3F4F6',
-  },
-  sheetTitle: { fontSize: 17, fontWeight: '700', color: '#111827' },
-  profileOption: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    paddingHorizontal: 20, paddingVertical: 14,
-    borderBottomWidth: 1, borderBottomColor: '#F9FAFB',
-  },
-  profileOptionAvatar: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
-  profileOptionAvatarText: { fontSize: 18, fontWeight: '700' },
-  profileOptionName: { fontSize: 14, fontWeight: '600', color: '#111827' },
-  profileOptionType: { fontSize: 12, color: '#9CA3AF', marginTop: 2 },
+    // Add profile modal
+    overlay: { flex: 1, backgroundColor: theme.colors.overlay, justifyContent: 'flex-end' },
+    sheet: { backgroundColor: theme.colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24, paddingBottom: 32, maxHeight: '70%' },
+    sheetHeader: {
+      flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+      padding: 20, borderBottomWidth: 1, borderBottomColor: theme.colors.divider,
+    },
+    sheetTitle: { fontSize: 17, fontWeight: '700', color: theme.colors.text },
+    profileOption: {
+      flexDirection: 'row', alignItems: 'center', gap: 12,
+      paddingHorizontal: 20, paddingVertical: 14,
+      borderBottomWidth: 1, borderBottomColor: theme.colors.divider,
+    },
+    profileOptionAvatar: { width: 44, height: 44, borderRadius: 22, justifyContent: 'center', alignItems: 'center' },
+    profileOptionAvatarText: { fontSize: 18, fontWeight: '700' },
+    profileOptionName: { fontSize: 14, fontWeight: '600', color: theme.colors.text },
+    profileOptionType: { fontSize: 12, color: theme.colors.textTertiary, marginTop: 2 },
 
-  // Empty state
-  emptyState: { alignItems: 'center', paddingTop: 80, paddingHorizontal: 32, gap: 12 },
-  emptyEmoji: { fontSize: 64 },
-  emptyTitle: { fontSize: 20, fontWeight: '800', color: '#111827' },
-  emptySub: { fontSize: 14, color: '#9CA3AF', textAlign: 'center', lineHeight: 20 },
-  createBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: '#2ECC71', paddingHorizontal: 28, paddingVertical: 14,
-    borderRadius: 14, marginTop: 8, width: '100%',
-    shadowColor: '#2ECC71', shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
-  },
-  createBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
-  joinBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: '#fff', paddingHorizontal: 28, paddingVertical: 14,
-    borderRadius: 14, width: '100%', borderWidth: 1, borderColor: '#2ECC71',
-  },
-  joinBtnText: { color: '#2ECC71', fontSize: 15, fontWeight: '600' },
-});
+    // Empty state
+    emptyState: { alignItems: 'center', paddingTop: 80, paddingHorizontal: 32, gap: 12 },
+    emptyEmoji: { fontSize: 64 },
+    emptyTitle: { fontSize: 20, fontWeight: '800', color: theme.colors.text },
+    emptySub: { fontSize: 14, color: theme.colors.textTertiary, textAlign: 'center', lineHeight: 20 },
+    createBtn: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+      backgroundColor: theme.colors.primary, paddingHorizontal: 28, paddingVertical: 14,
+      borderRadius: 14, marginTop: 8, width: '100%',
+      shadowColor: theme.colors.primary, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
+    },
+    createBtnText: { color: '#fff', fontSize: 15, fontWeight: '700' },
+    joinBtn: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+      backgroundColor: theme.colors.surface, paddingHorizontal: 28, paddingVertical: 14,
+      borderRadius: 14, width: '100%', borderWidth: 1, borderColor: theme.colors.primary,
+    },
+    joinBtnText: { color: theme.colors.primary, fontSize: 15, fontWeight: '600' },
+  });
+}

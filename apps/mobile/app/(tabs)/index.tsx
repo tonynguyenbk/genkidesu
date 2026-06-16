@@ -4,10 +4,12 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import type { Theme } from '@genki/ui';
 import { trpc } from '../../lib/trpc';
 import { ProfileSwitcher } from '../../components/ProfileSwitcher';
 import { useProfileTheme } from '../../hooks/useProfileTheme';
 import { useActiveProfile } from '../../hooks/useActiveProfile';
+import { useAppTheme, useThemedStyles } from '../../contexts/ThemeContext';
 
 const TODAY = new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'numeric' });
 // Computed once at module load — recomputing per render would change the
@@ -26,6 +28,7 @@ const MEAL_CONFIG = [
 function MacroBar({ label, current, goal, color }: {
   label: string; current: number; goal: number; color: string;
 }) {
+  const styles = useThemedStyles(createStyles);
   const pct = Math.min(goal > 0 ? current / goal : 0, 1);
   return (
     <View style={styles.macroItem}>
@@ -44,6 +47,8 @@ function MacroBar({ label, current, goal, color }: {
 function SeniorCalorieCard({ eaten, goal, remaining }: {
   eaten: number; goal: number; remaining: number;
 }) {
+  const { theme } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
   const pct = goal > 0 ? Math.min(Math.round((eaten / goal) * 100), 100) : 0;
   return (
     <View style={[styles.card, styles.seniorCard]}>
@@ -54,7 +59,7 @@ function SeniorCalorieCard({ eaten, goal, remaining }: {
         <View style={[styles.seniorProgressFill, { width: `${pct}%` as any }]} />
       </View>
       <Text style={styles.seniorCalSub}>
-        Còn lại: <Text style={{ color: '#F59E0B', fontWeight: '700' }}>{Math.round(remaining)} kcal</Text>
+        Còn lại: <Text style={{ color: theme.colors.warning, fontWeight: '700' }}>{Math.round(remaining)} kcal</Text>
         {' '}/ Mục tiêu: {goal} kcal
       </Text>
     </View>
@@ -65,6 +70,7 @@ function SeniorCalorieCard({ eaten, goal, remaining }: {
 function TeenStreakBanner({ streak, calories, goal }: {
   streak: number; calories: number; goal: number;
 }) {
+  const styles = useThemedStyles(createStyles);
   if (streak === 0 && calories === 0) return null;
   return (
     <View style={styles.streakBanner}>
@@ -92,6 +98,8 @@ function TeenStreakBanner({ streak, calories, goal }: {
 // Baby: feeding summary card
 function BabyFeedingCard({ logs, profileId }: { logs: any[]; profileId?: string }) {
   const router = useRouter();
+  const { theme } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
   const feedings = logs ?? [];
   const totalMl = feedings
     .filter((l) => l.mealType === 'formula' || l.mealType === 'baby_meal')
@@ -124,9 +132,9 @@ function BabyFeedingCard({ logs, profileId }: { logs: any[]; profileId?: string 
           style={styles.growthLink}
           onPress={() => router.push({ pathname: '/growth-chart', params: { profileId } })}
         >
-          <Ionicons name="trending-up" size={16} color="#EC4899" />
+          <Ionicons name="trending-up" size={16} color={theme.colors.primary} />
           <Text style={styles.growthLinkText}>Biểu đồ tăng trưởng (chuẩn WHO)</Text>
-          <Ionicons name="chevron-forward" size={16} color="#EC4899" />
+          <Ionicons name="chevron-forward" size={16} color={theme.colors.primary} />
         </TouchableOpacity>
       )}
     </View>
@@ -137,6 +145,8 @@ function BabyFeedingCard({ logs, profileId }: { logs: any[]; profileId?: string 
 
 export default function HomeScreen() {
   const router = useRouter();
+  const { theme } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
   const { isSenior, isBaby, isTeen, primaryColor, fontScale, simplifiedMode, buttonHeight } = useProfileTheme();
 
   const { activeProfile: profile, isLoading: profileLoading } = useActiveProfile();
@@ -220,7 +230,7 @@ export default function HomeScreen() {
                     style={[
                       styles.ringOuter,
                       // @ts-ignore — react-native-web passes unknown CSS through
-                      { background: `conic-gradient(${primaryColor} ${pct * 3.6}deg, #E5E7EB ${pct * 3.6}deg)` },
+                      { background: `conic-gradient(${primaryColor} ${pct * 3.6}deg, ${theme.colors.border} ${pct * 3.6}deg)` },
                     ]}
                   >
                     <View style={styles.ringInner}>
@@ -230,7 +240,7 @@ export default function HomeScreen() {
                     </View>
                   </View>
                 ) : (
-                  <View style={[styles.ring, { borderColor: '#E5E7EB' }]}>
+                  <View style={[styles.ring, { borderColor: theme.colors.border }]}>
                     <View style={[styles.ringProgress, { borderColor: primaryColor }]} />
                     <View style={styles.ringCenter}>
                       <Text style={styles.ringNumber}>{Math.round(eaten)}</Text>
@@ -243,8 +253,8 @@ export default function HomeScreen() {
               <View style={styles.calStats}>
                 {[
                   { label: 'Mục tiêu', val: caloriesGoal, color: primaryColor },
-                  { label: 'Đã ăn',    val: Math.round(eaten), color: '#F59E0B' },
-                  { label: 'Còn lại',  val: remaining,  color: '#E5E7EB' },
+                  { label: 'Đã ăn',    val: Math.round(eaten), color: theme.colors.warning },
+                  { label: 'Còn lại',  val: remaining,  color: theme.colors.border },
                 ].map((r) => (
                   <View key={r.label} style={styles.calStatRow}>
                     <View style={[styles.dot, { backgroundColor: r.color }]} />
@@ -256,9 +266,9 @@ export default function HomeScreen() {
             </View>
             {!simplifiedMode && (
               <View style={styles.macroSection}>
-                <MacroBar label="Protein" current={proteinIn} goal={proteinGoal} color="#3B82F6" />
-                <MacroBar label="Carbs"   current={carbsIn}   goal={carbsGoal}   color="#F59E0B" />
-                <MacroBar label="Fat"     current={fatIn}     goal={fatGoal}     color="#EF4444" />
+                <MacroBar label="Protein" current={proteinIn} goal={proteinGoal} color={theme.colors.info} />
+                <MacroBar label="Carbs"   current={carbsIn}   goal={carbsGoal}   color={theme.colors.warning} />
+                <MacroBar label="Fat"     current={fatIn}     goal={fatGoal}     color={theme.colors.error} />
               </View>
             )}
           </View>
@@ -323,7 +333,7 @@ export default function HomeScreen() {
                       <Text style={styles.mealType}>{item?.foodNameOverride ?? 'Bữa ăn'}</Text>
                       <Text style={styles.mealTime}>{time} · {Math.round(item?.portionGrams ?? 0)}g/ml</Text>
                     </View>
-                    <Text style={[styles.mealCal, { color: '#EC4899' }]}>
+                    <Text style={[styles.mealCal, { color: theme.colors.primary }]}>
                       {Math.round(item?.calories ?? 0)} kcal
                     </Text>
                   </View>
@@ -352,127 +362,129 @@ export default function HomeScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FBF9' },
-  header: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingHorizontal: 20, paddingTop: Platform.OS === 'web' ? 20 : 8, paddingBottom: 12,
-  },
-  greeting: { fontSize: 22, fontWeight: '700', color: '#111827' },
-  date: { fontSize: 13, color: '#9CA3AF', marginTop: 2 },
+function createStyles(theme: Theme) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: theme.colors.background },
+    header: {
+      flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+      paddingHorizontal: 20, paddingTop: Platform.OS === 'web' ? 20 : 8, paddingBottom: 12,
+    },
+    greeting: { fontSize: 22, fontWeight: '700', color: theme.colors.text },
+    date: { fontSize: 13, color: theme.colors.textTertiary, marginTop: 2 },
 
-  // Teen streak banner
-  streakBanner: {
-    flexDirection: 'row', alignItems: 'center',
-    backgroundColor: '#F5F3FF', borderRadius: 16, marginHorizontal: 16, marginBottom: 12,
-    padding: 14, borderWidth: 1, borderColor: '#DDD6FE', gap: 10,
-  },
-  streakFire: { fontSize: 32 },
-  streakNum: { fontSize: 15, fontWeight: '700', color: '#5B21B6' },
-  streakSub: { fontSize: 12, color: '#7C3AED', marginTop: 1 },
-  streakBadge: { alignItems: 'center', backgroundColor: '#EDE9FE', borderRadius: 12, padding: 8 },
-  streakBadgeText: { fontSize: 18, fontWeight: '800', color: '#5B21B6' },
-  streakBadgeLabel: { fontSize: 10, color: '#7C3AED' },
+    // Teen streak banner
+    streakBanner: {
+      flexDirection: 'row', alignItems: 'center',
+      backgroundColor: theme.colors.surfaceAlt, borderRadius: 16, marginHorizontal: 16, marginBottom: 12,
+      padding: 14, borderWidth: 1, borderColor: theme.colors.border, gap: 10,
+    },
+    streakFire: { fontSize: 32 },
+    streakNum: { fontSize: 15, fontWeight: '700', color: theme.colors.primary },
+    streakSub: { fontSize: 12, color: theme.colors.secondary, marginTop: 1 },
+    streakBadge: { alignItems: 'center', backgroundColor: theme.colors.surfaceAlt, borderRadius: 12, padding: 8 },
+    streakBadgeText: { fontSize: 18, fontWeight: '800', color: theme.colors.primary },
+    streakBadgeLabel: { fontSize: 10, color: theme.colors.secondary },
 
-  // Cards
-  card: {
-    backgroundColor: '#fff', borderRadius: 20, marginHorizontal: 16, marginBottom: 16,
-    padding: 20, shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8, elevation: 2,
-  },
+    // Cards
+    card: {
+      backgroundColor: theme.colors.surface, borderRadius: 20, marginHorizontal: 16, marginBottom: 16,
+      padding: 20, shadowColor: theme.colors.shadow, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2,
+    },
 
-  // Senior card
-  seniorCard: { alignItems: 'center', paddingVertical: 28 },
-  seniorCalLabel: { fontSize: 16, color: '#6B7280', marginBottom: 6 },
-  seniorCalNumber: { fontSize: 56, fontWeight: '900', color: '#F59E0B' },
-  seniorCalUnit: { fontSize: 16, color: '#9CA3AF', marginTop: -4, marginBottom: 16 },
-  seniorProgressTrack: {
-    width: '100%', height: 10, backgroundColor: '#F3F4F6', borderRadius: 5, overflow: 'hidden', marginBottom: 10,
-  },
-  seniorProgressFill: { height: 10, backgroundColor: '#F59E0B', borderRadius: 5 },
-  seniorCalSub: { fontSize: 15, color: '#6B7280', textAlign: 'center' },
+    // Senior card
+    seniorCard: { alignItems: 'center', paddingVertical: 28 },
+    seniorCalLabel: { fontSize: 16, color: theme.colors.textSecondary, marginBottom: 6 },
+    seniorCalNumber: { fontSize: 56, fontWeight: '900', color: theme.colors.primary },
+    seniorCalUnit: { fontSize: 16, color: theme.colors.textTertiary, marginTop: -4, marginBottom: 16 },
+    seniorProgressTrack: {
+      width: '100%', height: 10, backgroundColor: theme.colors.divider, borderRadius: 5, overflow: 'hidden', marginBottom: 10,
+    },
+    seniorProgressFill: { height: 10, backgroundColor: theme.colors.primary, borderRadius: 5 },
+    seniorCalSub: { fontSize: 15, color: theme.colors.textSecondary, textAlign: 'center' },
 
-  // Baby card
-  babyCard: { backgroundColor: '#FFF5F9' },
-  babyCardHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
-  babyCardTitle: { fontSize: 15, fontWeight: '700', color: '#111827' },
-  babyCardCount: { fontSize: 13, color: '#EC4899', fontWeight: '600' },
-  babyStats: { flexDirection: 'row' },
-  babyStatItem: { flex: 1, alignItems: 'center' },
-  babyStatVal: { fontSize: 24, fontWeight: '800', color: '#EC4899' },
-  babyStatLabel: { fontSize: 11, color: '#9CA3AF', marginTop: 2 },
-  growthLink: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
-    marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: '#FCE7F3',
-  },
-  growthLinkText: { fontSize: 13, fontWeight: '600', color: '#EC4899' },
+    // Baby card
+    babyCard: { backgroundColor: theme.colors.surfaceAlt },
+    babyCardHeader: { flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 },
+    babyCardTitle: { fontSize: 15, fontWeight: '700', color: theme.colors.text },
+    babyCardCount: { fontSize: 13, color: theme.colors.primary, fontWeight: '600' },
+    babyStats: { flexDirection: 'row' },
+    babyStatItem: { flex: 1, alignItems: 'center' },
+    babyStatVal: { fontSize: 24, fontWeight: '800', color: theme.colors.primary },
+    babyStatLabel: { fontSize: 11, color: theme.colors.textTertiary, marginTop: 2 },
+    growthLink: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6,
+      marginTop: 14, paddingTop: 14, borderTopWidth: 1, borderTopColor: theme.colors.surfaceAlt,
+    },
+    growthLinkText: { fontSize: 13, fontWeight: '600', color: theme.colors.primary },
 
-  // Standard calorie ring card
-  ringRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
-  ringWrapper: { marginRight: 24 },
-  // Web ring: outer circle uses conic-gradient background (set via inline style)
-  ringOuter: {
-    width: 110, height: 110, borderRadius: 55,
-    justifyContent: 'center', alignItems: 'center',
-  },
-  // Inner white circle cuts out the center to make it look like a ring
-  ringInner: {
-    width: 84, height: 84, borderRadius: 42,
-    backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center',
-  },
-  // Native ring (border trick)
-  ring: {
-    width: 110, height: 110, borderRadius: 55,
-    borderWidth: 10, justifyContent: 'center', alignItems: 'center',
-  },
-  ringProgress: {
-    position: 'absolute', width: 110, height: 110, borderRadius: 55,
-    borderWidth: 10,
-    borderLeftColor: 'transparent', borderBottomColor: 'transparent',
-    transform: [{ rotate: '-45deg' }],
-  },
-  ringCenter: { alignItems: 'center' },
-  ringNumber: { fontSize: 24, fontWeight: '800', color: '#111827' },
-  ringLabel: { fontSize: 11, color: '#6B7280' },
-  ringSub: { fontSize: 10, color: '#9CA3AF' },
-  calStats: { flex: 1, gap: 10 },
-  calStatRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  dot: { width: 8, height: 8, borderRadius: 4 },
-  calStatLabel: { flex: 1, fontSize: 13, color: '#6B7280' },
-  calStatVal: { fontSize: 13, fontWeight: '600', color: '#111827' },
-  macroSection: { gap: 8 },
-  macroItem: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-  macroLabel: { width: 50, fontSize: 12, color: '#6B7280' },
-  macroTrack: { flex: 1, height: 6, backgroundColor: '#F3F4F6', borderRadius: 3, overflow: 'hidden' },
-  macroFill: { height: 6, borderRadius: 3 },
-  macroValue: { fontSize: 12, fontWeight: '600', color: '#111827', width: 55, textAlign: 'right' },
-  macroGoal: { fontSize: 10, color: '#9CA3AF', fontWeight: '400' },
+    // Standard calorie ring card
+    ringRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 20 },
+    ringWrapper: { marginRight: 24 },
+    // Web ring: outer circle uses conic-gradient background (set via inline style)
+    ringOuter: {
+      width: 110, height: 110, borderRadius: 55,
+      justifyContent: 'center', alignItems: 'center',
+    },
+    // Inner circle cuts out the center to make it look like a ring
+    ringInner: {
+      width: 84, height: 84, borderRadius: 42,
+      backgroundColor: theme.colors.surface, justifyContent: 'center', alignItems: 'center',
+    },
+    // Native ring (border trick)
+    ring: {
+      width: 110, height: 110, borderRadius: 55,
+      borderWidth: 10, justifyContent: 'center', alignItems: 'center',
+    },
+    ringProgress: {
+      position: 'absolute', width: 110, height: 110, borderRadius: 55,
+      borderWidth: 10,
+      borderLeftColor: 'transparent', borderBottomColor: 'transparent',
+      transform: [{ rotate: '-45deg' }],
+    },
+    ringCenter: { alignItems: 'center' },
+    ringNumber: { fontSize: 24, fontWeight: '800', color: theme.colors.text },
+    ringLabel: { fontSize: 11, color: theme.colors.textSecondary },
+    ringSub: { fontSize: 10, color: theme.colors.textTertiary },
+    calStats: { flex: 1, gap: 10 },
+    calStatRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    dot: { width: 8, height: 8, borderRadius: 4 },
+    calStatLabel: { flex: 1, fontSize: 13, color: theme.colors.textSecondary },
+    calStatVal: { fontSize: 13, fontWeight: '600', color: theme.colors.text },
+    macroSection: { gap: 8 },
+    macroItem: { flexDirection: 'row', alignItems: 'center', gap: 10 },
+    macroLabel: { width: 50, fontSize: 12, color: theme.colors.textSecondary },
+    macroTrack: { flex: 1, height: 6, backgroundColor: theme.colors.divider, borderRadius: 3, overflow: 'hidden' },
+    macroFill: { height: 6, borderRadius: 3 },
+    macroValue: { fontSize: 12, fontWeight: '600', color: theme.colors.text, width: 55, textAlign: 'right' },
+    macroGoal: { fontSize: 10, color: theme.colors.textTertiary, fontWeight: '400' },
 
-  // Meal section
-  section: { paddingHorizontal: 16, marginBottom: 16 },
-  sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#111827' },
-  sectionSub: { fontSize: 12, color: '#2ECC71', fontWeight: '600' },
-  mealList: {
-    backgroundColor: '#fff', borderRadius: 16,
-    shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, elevation: 1,
-  },
-  mealRow: {
-    flexDirection: 'row', alignItems: 'center', padding: 14,
-    borderBottomWidth: 1, borderBottomColor: '#F9FAFB',
-  },
-  mealRowEmpty: { opacity: 0.65 },
-  mealIcon: { fontSize: 24, marginRight: 12 },
-  mealType: { fontSize: 14, fontWeight: '600', color: '#111827' },
-  mealTime: { fontSize: 12, color: '#9CA3AF', marginTop: 1 },
-  mealCal: { fontSize: 13, fontWeight: '600', color: '#2ECC71' },
+    // Meal section
+    section: { paddingHorizontal: 16, marginBottom: 16 },
+    sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },
+    sectionTitle: { fontSize: 16, fontWeight: '700', color: theme.colors.text },
+    sectionSub: { fontSize: 12, color: theme.colors.primary, fontWeight: '600' },
+    mealList: {
+      backgroundColor: theme.colors.surface, borderRadius: 16,
+      shadowColor: theme.colors.shadow, shadowOpacity: 0.04, shadowRadius: 6, elevation: 1,
+    },
+    mealRow: {
+      flexDirection: 'row', alignItems: 'center', padding: 14,
+      borderBottomWidth: 1, borderBottomColor: theme.colors.divider,
+    },
+    mealRowEmpty: { opacity: 0.65 },
+    mealIcon: { fontSize: 24, marginRight: 12 },
+    mealType: { fontSize: 14, fontWeight: '600', color: theme.colors.text },
+    mealTime: { fontSize: 12, color: theme.colors.textTertiary, marginTop: 1 },
+    mealCal: { fontSize: 13, fontWeight: '600', color: theme.colors.primary },
 
-  // Quick log CTA
-  quickLog: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 8, marginHorizontal: 16, padding: 16, borderRadius: 16,
-    shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
-  },
-  quickLogText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  quickLogSenior: { padding: 18, borderRadius: 18 },
-  quickLogTextSenior: { fontSize: 19 },
-});
+    // Quick log CTA
+    quickLog: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+      gap: 8, marginHorizontal: 16, padding: 16, borderRadius: 16,
+      shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
+    },
+    quickLogText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+    quickLogSenior: { padding: 18, borderRadius: 18 },
+    quickLogTextSenior: { fontSize: 19 },
+  });
+}

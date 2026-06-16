@@ -2,7 +2,9 @@ import { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Modal, FlatList } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
+import type { Theme } from '@genki/ui';
 import { useActiveProfile } from '../hooks/useActiveProfile';
+import { useAppTheme, useThemedStyles } from '../contexts/ThemeContext';
 
 const TYPE_COLORS: Record<string, string> = {
   adult: '#2ECC71', senior: '#F59E0B', teen: '#8B5CF6', baby: '#EC4899',
@@ -16,6 +18,8 @@ export function ProfileSwitcher() {
   const [open, setOpen] = useState(false);
   const router = useRouter();
   const { activeProfile, setActiveProfile, profiles } = useActiveProfile();
+  const { theme } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
 
   const color = TYPE_COLORS[activeProfile?.type ?? 'adult'] ?? '#2ECC71';
   // Normalize to ASCII so Vietnamese diacritics (Ô, Ă, Đ…) don't render as
@@ -52,7 +56,7 @@ export function ProfileSwitcher() {
             <View style={styles.sheetHeader}>
               <Text style={styles.sheetTitle}>Chuyển hồ sơ</Text>
               <TouchableOpacity onPress={() => setOpen(false)}>
-                <Ionicons name="close" size={22} color="#6B7280" />
+                <Ionicons name="close" size={22} color={theme.colors.textSecondary} />
               </TouchableOpacity>
             </View>
 
@@ -77,7 +81,7 @@ export function ProfileSwitcher() {
                         {item.tdeeKcal ? ` · ${Math.round(item.tdeeKcal)} kcal` : ''}
                       </Text>
                     </View>
-                    {isActive && <Ionicons name="checkmark-circle" size={22} color="#2ECC71" />}
+                    {isActive && <Ionicons name="checkmark-circle" size={22} color={theme.colors.primary} />}
                   </TouchableOpacity>
                 );
               }}
@@ -86,7 +90,7 @@ export function ProfileSwitcher() {
                   style={styles.addProfile}
                   onPress={() => { setOpen(false); router.push('/profile/create'); }}
                 >
-                  <Ionicons name="add-circle-outline" size={20} color="#2ECC71" />
+                  <Ionicons name="add-circle-outline" size={20} color={theme.colors.primary} />
                   <Text style={styles.addProfileText}>Thêm hồ sơ mới</Text>
                 </TouchableOpacity>
               }
@@ -98,47 +102,49 @@ export function ProfileSwitcher() {
   );
 }
 
-const styles = StyleSheet.create({
-  trigger: {
-    flexDirection: 'row', alignItems: 'center', gap: 7,
-    paddingVertical: 6, paddingLeft: 6, paddingRight: 10,
-    borderRadius: 24, borderWidth: 1.5,
-    maxWidth: 160,
-  },
-  triggerName: { fontSize: 14, fontWeight: '700', flexShrink: 1 },
-  avatar: {
-    width: 30, height: 30, borderRadius: 15,
-    justifyContent: 'center', alignItems: 'center',
-  },
-  avatarText: { color: '#fff', fontWeight: '700', fontSize: 13 },
-  overlay: {
-    flex: 1, backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'flex-end',
-  },
-  sheet: {
-    backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24,
-    paddingBottom: 32, maxHeight: '70%',
-  },
-  sheetHeader: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    padding: 20, borderBottomWidth: 1, borderBottomColor: '#F3F4F6',
-  },
-  sheetTitle: { fontSize: 17, fontWeight: '700', color: '#111827' },
-  profileRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 14,
-    paddingHorizontal: 20, paddingVertical: 14,
-    borderBottomWidth: 1, borderBottomColor: '#F9FAFB',
-  },
-  profileRowActive: { backgroundColor: '#F0FDF4' },
-  profileAvatar: {
-    width: 46, height: 46, borderRadius: 23,
-    justifyContent: 'center', alignItems: 'center',
-  },
-  profileName: { fontSize: 15, fontWeight: '700', color: '#111827' },
-  profileType: { fontSize: 12, color: '#9CA3AF', marginTop: 2 },
-  addProfile: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    paddingHorizontal: 20, paddingVertical: 16,
-  },
-  addProfileText: { fontSize: 15, color: '#2ECC71', fontWeight: '600' },
-});
+function createStyles(theme: Theme) {
+  return StyleSheet.create({
+    trigger: {
+      flexDirection: 'row', alignItems: 'center', gap: 7,
+      paddingVertical: 6, paddingLeft: 6, paddingRight: 10,
+      borderRadius: 24, borderWidth: 1.5,
+      maxWidth: 160,
+    },
+    triggerName: { fontSize: 14, fontWeight: '700', flexShrink: 1 },
+    avatar: {
+      width: 30, height: 30, borderRadius: 15,
+      justifyContent: 'center', alignItems: 'center',
+    },
+    avatarText: { color: '#fff', fontWeight: '700', fontSize: 13 },
+    overlay: {
+      flex: 1, backgroundColor: theme.colors.overlay,
+      justifyContent: 'flex-end',
+    },
+    sheet: {
+      backgroundColor: theme.colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24,
+      paddingBottom: 32, maxHeight: '70%',
+    },
+    sheetHeader: {
+      flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+      padding: 20, borderBottomWidth: 1, borderBottomColor: theme.colors.divider,
+    },
+    sheetTitle: { fontSize: 17, fontWeight: '700', color: theme.colors.text },
+    profileRow: {
+      flexDirection: 'row', alignItems: 'center', gap: 14,
+      paddingHorizontal: 20, paddingVertical: 14,
+      borderBottomWidth: 1, borderBottomColor: theme.colors.divider,
+    },
+    profileRowActive: { backgroundColor: theme.colors.surfaceAlt },
+    profileAvatar: {
+      width: 46, height: 46, borderRadius: 23,
+      justifyContent: 'center', alignItems: 'center',
+    },
+    profileName: { fontSize: 15, fontWeight: '700', color: theme.colors.text },
+    profileType: { fontSize: 12, color: theme.colors.textTertiary, marginTop: 2 },
+    addProfile: {
+      flexDirection: 'row', alignItems: 'center', gap: 10,
+      paddingHorizontal: 20, paddingVertical: 16,
+    },
+    addProfileText: { fontSize: 15, color: theme.colors.primary, fontWeight: '600' },
+  });
+}

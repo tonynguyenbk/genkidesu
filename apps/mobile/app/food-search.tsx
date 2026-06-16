@@ -5,7 +5,9 @@ import {
 } from 'react-native';
 import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import type { Theme } from '@genki/ui';
 import { trpc } from '../lib/trpc';
+import { useAppTheme, useThemedStyles } from '../contexts/ThemeContext';
 
 interface FoodItem {
   id: string;
@@ -30,6 +32,8 @@ const QUICK_CATEGORIES = ['breakfast', 'main_dish', 'vegetable', 'protein', 'dri
 
 export default function FoodSearchScreen() {
   const router = useRouter();
+  const { theme } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
   const params = useLocalSearchParams<{ profileId: string; mealType: string; loggedAt: string }>();
   const [query, setQuery] = useState('');
   const [category, setCategory] = useState<string | null>(null);
@@ -83,21 +87,21 @@ export default function FoodSearchScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={22} color="#111827" />
+          <Ionicons name="arrow-back" size={22} color={theme.colors.text} />
         </TouchableOpacity>
         <View style={styles.searchBox}>
-          <Ionicons name="search" size={18} color="#9CA3AF" />
+          <Ionicons name="search" size={18} color={theme.colors.textTertiary} />
           <TextInput
             style={styles.searchInput}
             placeholder="Tìm món ăn..."
             value={query}
             onChangeText={(v) => { setQuery(v); setCategory(null); setSelectedFood(null); }}
             autoFocus
-            placeholderTextColor="#9CA3AF"
+            placeholderTextColor={theme.colors.textTertiary}
           />
           {query ? (
             <TouchableOpacity onPress={() => setQuery('')}>
-              <Ionicons name="close-circle" size={18} color="#9CA3AF" />
+              <Ionicons name="close-circle" size={18} color={theme.colors.textTertiary} />
             </TouchableOpacity>
           ) : null}
         </View>
@@ -136,7 +140,7 @@ export default function FoodSearchScreen() {
                 onChangeText={setPortionG}
                 keyboardType="decimal-pad"
                 placeholder={String(selectedFood.typicalPortionG ?? 100)}
-                placeholderTextColor="#9CA3AF"
+                placeholderTextColor={theme.colors.textTertiary}
                 autoFocus
               />
             </View>
@@ -148,10 +152,10 @@ export default function FoodSearchScreen() {
               return (
                 <View style={styles.macroPreview}>
                   {[
-                    { label: 'Calo', val: Math.round(selectedFood.calPer100g * r), unit: 'kcal', color: '#2ECC71' },
-                    { label: 'Protein', val: (selectedFood.proteinPer100g * r).toFixed(1), unit: 'g', color: '#3B82F6' },
-                    { label: 'Carbs', val: (selectedFood.carbsPer100g * r).toFixed(1), unit: 'g', color: '#F59E0B' },
-                    { label: 'Fat', val: (selectedFood.fatPer100g * r).toFixed(1), unit: 'g', color: '#EF4444' },
+                    { label: 'Calo', val: Math.round(selectedFood.calPer100g * r), unit: 'kcal', color: theme.colors.primary },
+                    { label: 'Protein', val: (selectedFood.proteinPer100g * r).toFixed(1), unit: 'g', color: theme.colors.info },
+                    { label: 'Carbs', val: (selectedFood.carbsPer100g * r).toFixed(1), unit: 'g', color: theme.colors.warning },
+                    { label: 'Fat', val: (selectedFood.fatPer100g * r).toFixed(1), unit: 'g', color: theme.colors.error },
                   ].map((m) => (
                     <View key={m.label} style={styles.macroItem}>
                       <Text style={[styles.macroVal, { color: m.color }]}>{m.val}</Text>
@@ -199,12 +203,12 @@ export default function FoodSearchScreen() {
                 <Text style={styles.foodCalNum}>{Math.round(item.calPer100g * (item.typicalPortionG ?? 100) / 100)}</Text>
                 <Text style={styles.foodCalUnit}>kcal</Text>
               </View>
-              <Ionicons name="add-circle-outline" size={22} color="#2ECC71" style={{ marginLeft: 8 }} />
+              <Ionicons name="add-circle-outline" size={22} color={theme.colors.primary} style={{ marginLeft: 8 }} />
             </TouchableOpacity>
           )}
           ListHeaderComponent={isLoading ? (
             <View style={styles.loading}>
-              <ActivityIndicator color="#2ECC71" />
+              <ActivityIndicator color={theme.colors.primary} />
             </View>
           ) : null}
           ListEmptyComponent={!isLoading && (query || category) ? (
@@ -226,81 +230,83 @@ export default function FoodSearchScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FBF9' },
-  header: {
-    flexDirection: 'row', alignItems: 'center', gap: 10,
-    paddingHorizontal: 12, paddingVertical: 10,
-    backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#F3F4F6',
-  },
-  backBtn: { padding: 4 },
-  searchBox: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: '#F9FAFB', borderRadius: 12, paddingHorizontal: 12, height: 44,
-    borderWidth: 1.5, borderColor: '#E5E7EB',
-  },
-  searchInput: { flex: 1, fontSize: 16, color: '#111827' },
-  catRow: {
-    flexDirection: 'row', flexWrap: 'wrap', gap: 8,
-    paddingHorizontal: 12, paddingVertical: 10,
-    backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#F3F4F6',
-  },
-  catChip: {
-    paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20,
-    borderWidth: 1.5, borderColor: '#E5E7EB', backgroundColor: '#F9FAFB',
-  },
-  catChipActive: { borderColor: '#2ECC71', backgroundColor: '#F0FDF4' },
-  catText: { fontSize: 12, fontWeight: '600', color: '#6B7280' },
-  catTextActive: { color: '#2ECC71' },
-  foodRow: {
-    flexDirection: 'row', alignItems: 'center',
-    paddingHorizontal: 16, paddingVertical: 14,
-    backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#F9FAFB',
-  },
-  foodName: { fontSize: 15, fontWeight: '600', color: '#111827' },
-  foodSub: { fontSize: 12, color: '#9CA3AF', marginTop: 2 },
-  foodCal: { alignItems: 'flex-end' },
-  foodCalNum: { fontSize: 16, fontWeight: '800', color: '#2ECC71' },
-  foodCalUnit: { fontSize: 10, color: '#9CA3AF' },
-  loading: { padding: 24, alignItems: 'center' },
-  empty: { padding: 48, alignItems: 'center', gap: 8 },
-  emptyIcon: { fontSize: 40 },
-  emptyText: { fontSize: 15, color: '#9CA3AF', textAlign: 'center' },
-  hint: { padding: 48, alignItems: 'center' },
-  hintText: { fontSize: 14, color: '#9CA3AF', textAlign: 'center' },
+function createStyles(theme: Theme) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: theme.colors.background },
+    header: {
+      flexDirection: 'row', alignItems: 'center', gap: 10,
+      paddingHorizontal: 12, paddingVertical: 10,
+      backgroundColor: theme.colors.surface, borderBottomWidth: 1, borderBottomColor: theme.colors.divider,
+    },
+    backBtn: { padding: 4 },
+    searchBox: {
+      flex: 1, flexDirection: 'row', alignItems: 'center', gap: 8,
+      backgroundColor: theme.colors.divider, borderRadius: 12, paddingHorizontal: 12, height: 44,
+      borderWidth: 1.5, borderColor: theme.colors.border,
+    },
+    searchInput: { flex: 1, fontSize: 16, color: theme.colors.text },
+    catRow: {
+      flexDirection: 'row', flexWrap: 'wrap', gap: 8,
+      paddingHorizontal: 12, paddingVertical: 10,
+      backgroundColor: theme.colors.surface, borderBottomWidth: 1, borderBottomColor: theme.colors.divider,
+    },
+    catChip: {
+      paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20,
+      borderWidth: 1.5, borderColor: theme.colors.border, backgroundColor: theme.colors.divider,
+    },
+    catChipActive: { borderColor: theme.colors.primary, backgroundColor: theme.colors.surfaceAlt },
+    catText: { fontSize: 12, fontWeight: '600', color: theme.colors.textSecondary },
+    catTextActive: { color: theme.colors.primary },
+    foodRow: {
+      flexDirection: 'row', alignItems: 'center',
+      paddingHorizontal: 16, paddingVertical: 14,
+      backgroundColor: theme.colors.surface, borderBottomWidth: 1, borderBottomColor: theme.colors.divider,
+    },
+    foodName: { fontSize: 15, fontWeight: '600', color: theme.colors.text },
+    foodSub: { fontSize: 12, color: theme.colors.textTertiary, marginTop: 2 },
+    foodCal: { alignItems: 'flex-end' },
+    foodCalNum: { fontSize: 16, fontWeight: '800', color: theme.colors.primary },
+    foodCalUnit: { fontSize: 10, color: theme.colors.textTertiary },
+    loading: { padding: 24, alignItems: 'center' },
+    empty: { padding: 48, alignItems: 'center', gap: 8 },
+    emptyIcon: { fontSize: 40 },
+    emptyText: { fontSize: 15, color: theme.colors.textTertiary, textAlign: 'center' },
+    hint: { padding: 48, alignItems: 'center' },
+    hintText: { fontSize: 14, color: theme.colors.textTertiary, textAlign: 'center' },
 
-  portionView: { flex: 1, padding: 16 },
-  portionCard: {
-    backgroundColor: '#fff', borderRadius: 20, padding: 20, gap: 16,
-    shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8, elevation: 2,
-  },
-  portionTitle: { fontSize: 20, fontWeight: '800', color: '#111827' },
-  portionSub: { fontSize: 13, color: '#9CA3AF', marginTop: -10 },
-  portionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
-  portionLabel: { fontSize: 15, fontWeight: '600', color: '#374151' },
-  portionInput: {
-    borderWidth: 2, borderColor: '#2ECC71', borderRadius: 12,
-    paddingHorizontal: 16, paddingVertical: 10,
-    fontSize: 22, fontWeight: '800', color: '#2ECC71',
-    minWidth: 100, textAlign: 'center',
-  },
-  macroPreview: {
-    flexDirection: 'row', backgroundColor: '#F9FAFB', borderRadius: 14, padding: 14,
-  },
-  macroItem: { flex: 1, alignItems: 'center' },
-  macroVal: { fontSize: 20, fontWeight: '800' },
-  macroUnit: { fontSize: 10, color: '#9CA3AF' },
-  macroLabel: { fontSize: 11, color: '#6B7280', marginTop: 2 },
-  portionButtons: { flexDirection: 'row', gap: 10, marginTop: 4 },
-  cancelBtn: {
-    flex: 1, padding: 14, borderRadius: 12, alignItems: 'center',
-    borderWidth: 1.5, borderColor: '#E5E7EB',
-  },
-  cancelText: { fontSize: 14, color: '#6B7280', fontWeight: '600' },
-  addBtn: {
-    flex: 2, backgroundColor: '#2ECC71', padding: 14, borderRadius: 12, alignItems: 'center',
-    shadowColor: '#2ECC71', shadowOpacity: 0.25, shadowRadius: 6, elevation: 3,
-  },
-  addBtnDisabled: { backgroundColor: '#9CA3AF' },
-  addBtnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
-});
+    portionView: { flex: 1, padding: 16 },
+    portionCard: {
+      backgroundColor: theme.colors.surface, borderRadius: 20, padding: 20, gap: 16,
+      shadowColor: theme.colors.shadow, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2,
+    },
+    portionTitle: { fontSize: 20, fontWeight: '800', color: theme.colors.text },
+    portionSub: { fontSize: 13, color: theme.colors.textTertiary, marginTop: -10 },
+    portionRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+    portionLabel: { fontSize: 15, fontWeight: '600', color: theme.colors.text },
+    portionInput: {
+      borderWidth: 2, borderColor: theme.colors.primary, borderRadius: 12,
+      paddingHorizontal: 16, paddingVertical: 10,
+      fontSize: 22, fontWeight: '800', color: theme.colors.primary,
+      minWidth: 100, textAlign: 'center',
+    },
+    macroPreview: {
+      flexDirection: 'row', backgroundColor: theme.colors.divider, borderRadius: 14, padding: 14,
+    },
+    macroItem: { flex: 1, alignItems: 'center' },
+    macroVal: { fontSize: 20, fontWeight: '800' },
+    macroUnit: { fontSize: 10, color: theme.colors.textTertiary },
+    macroLabel: { fontSize: 11, color: theme.colors.textSecondary, marginTop: 2 },
+    portionButtons: { flexDirection: 'row', gap: 10, marginTop: 4 },
+    cancelBtn: {
+      flex: 1, padding: 14, borderRadius: 12, alignItems: 'center',
+      borderWidth: 1.5, borderColor: theme.colors.border,
+    },
+    cancelText: { fontSize: 14, color: theme.colors.textSecondary, fontWeight: '600' },
+    addBtn: {
+      flex: 2, backgroundColor: theme.colors.primary, padding: 14, borderRadius: 12, alignItems: 'center',
+      shadowColor: theme.colors.primary, shadowOpacity: 0.25, shadowRadius: 6, elevation: 3,
+    },
+    addBtnDisabled: { backgroundColor: theme.colors.textTertiary },
+    addBtnText: { fontSize: 15, fontWeight: '700', color: '#fff' },
+  });
+}

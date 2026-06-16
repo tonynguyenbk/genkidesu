@@ -7,6 +7,8 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { trpc, queryClient } from '../../lib/trpc';
 import { useProfileTheme } from '../../hooks/useProfileTheme';
+import type { Theme } from '@genki/ui';
+import { useAppTheme, useThemedStyles } from '../../contexts/ThemeContext';
 import type { VisionResult, DetectedDish } from '@genki/api';
 
 type EditableDish = DetectedDish & { key: string };
@@ -33,9 +35,11 @@ function DishCard({
 }) {
   const [editing, setEditing] = useState(false);
   const [portionStr, setPortionStr] = useState(String(dish.portionG));
+  const { theme } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
 
   const confidence = Math.round(dish.confidence * 100);
-  const confColor = confidence >= 85 ? '#2ECC71' : confidence >= 70 ? '#F59E0B' : '#EF4444';
+  const confColor = confidence >= 85 ? theme.colors.success : confidence >= 70 ? theme.colors.warning : theme.colors.error;
 
   return (
     <View style={styles.dishCard}>
@@ -50,7 +54,7 @@ function DishCard({
           <Text style={styles.dishNameEn}>{dish.nameEn}</Text>
         </View>
         <TouchableOpacity onPress={() => onRemove(dish.key)} style={styles.removeBtn}>
-          <Ionicons name="close-circle" size={22} color="#9CA3AF" />
+          <Ionicons name="close-circle" size={22} color={theme.colors.textTertiary} />
         </TouchableOpacity>
       </View>
 
@@ -74,7 +78,7 @@ function DishCard({
         ) : (
           <TouchableOpacity onPress={() => setEditing(true)} style={styles.portionDisplay}>
             <Text style={styles.portionValue}>{dish.portionG}g</Text>
-            <Ionicons name="pencil" size={13} color="#2ECC71" />
+            <Ionicons name="pencil" size={13} color={theme.colors.primary} />
           </TouchableOpacity>
         )}
       </View>
@@ -107,6 +111,8 @@ function DishCard({
 
 export default function MealResultScreen() {
   const router = useRouter();
+  const { theme } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
   const { isSenior, simplifiedMode } = useProfileTheme();
   // null = user hasn't toggled yet → derive from simplifiedMode (which loads async).
   // Once user taps the toggle we store an explicit boolean override.
@@ -217,7 +223,7 @@ export default function MealResultScreen() {
       {/* Header */}
       <View style={styles.topBar}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={22} color="#111827" />
+          <Ionicons name="arrow-back" size={22} color={theme.colors.text} />
         </TouchableOpacity>
         <Text style={styles.topTitle}>Kết quả AI</Text>
         <View style={{ width: 38 }} />
@@ -232,7 +238,7 @@ export default function MealResultScreen() {
               <Text style={styles.mealLabel}>{MEAL_LABELS[params.mealType ?? 'lunch']}</Text>
               <Text style={styles.mealTime}>{new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</Text>
               <View style={styles.aiBadge}>
-                <Ionicons name="sparkles" size={12} color="#8B5CF6" />
+                <Ionicons name="sparkles" size={12} color={theme.colors.info} />
                 <Text style={styles.aiBadgeText}>AI phân tích trong {scanData.processingMs}ms</Text>
               </View>
             </View>
@@ -248,15 +254,15 @@ export default function MealResultScreen() {
               <Text style={styles.totalKey}>kcal</Text>
             </View>
             <View style={styles.totalItem}>
-              <Text style={[styles.totalVal, { color: '#3B82F6' }]}>{totals.p.toFixed(1)}g</Text>
+              <Text style={[styles.totalVal, { color: theme.colors.info }]}>{totals.p.toFixed(1)}g</Text>
               <Text style={styles.totalKey}>Protein</Text>
             </View>
             <View style={styles.totalItem}>
-              <Text style={[styles.totalVal, { color: '#F59E0B' }]}>{totals.c.toFixed(1)}g</Text>
+              <Text style={[styles.totalVal, { color: theme.colors.warning }]}>{totals.c.toFixed(1)}g</Text>
               <Text style={styles.totalKey}>Carbs</Text>
             </View>
             <View style={styles.totalItem}>
-              <Text style={[styles.totalVal, { color: '#EF4444' }]}>{totals.f.toFixed(1)}g</Text>
+              <Text style={[styles.totalVal, { color: theme.colors.error }]}>{totals.f.toFixed(1)}g</Text>
               <Text style={styles.totalKey}>Fat</Text>
             </View>
           </View>
@@ -265,7 +271,7 @@ export default function MealResultScreen() {
         {/* Alerts */}
         {(scanData.alerts ?? []).map((a, i) => (
           <View key={i} style={styles.alert}>
-            <Ionicons name="information-circle" size={18} color="#F59E0B" />
+            <Ionicons name="information-circle" size={18} color={theme.colors.warning} />
             <Text style={styles.alertText}>{a}</Text>
           </View>
         ))}
@@ -291,7 +297,7 @@ export default function MealResultScreen() {
               ))}
             </View>
             <TouchableOpacity style={styles.detailsToggle} onPress={() => setShowDetailsOverride(true)}>
-              <Ionicons name="create-outline" size={isSenior ? 22 : 18} color="#2ECC71" />
+              <Ionicons name="create-outline" size={isSenior ? 22 : 18} color={theme.colors.primary} />
               <Text style={[styles.detailsToggleText, isSenior && styles.detailsToggleTextSenior]}>
                 Xem &amp; chỉnh sửa chi tiết từng món
               </Text>
@@ -316,28 +322,28 @@ export default function MealResultScreen() {
             {/* Add manual */}
             {!showAddManual ? (
               <TouchableOpacity style={styles.addManual} onPress={() => setShowAddManual(true)}>
-                <Ionicons name="add-circle-outline" size={20} color="#2ECC71" />
+                <Ionicons name="add-circle-outline" size={20} color={theme.colors.primary} />
                 <Text style={styles.addManualText}>Thêm món thủ công</Text>
               </TouchableOpacity>
             ) : (
               <View style={styles.addManualPanel}>
                 <View style={styles.addManualSearchRow}>
-                  <Ionicons name="search" size={16} color="#9CA3AF" />
+                  <Ionicons name="search" size={16} color={theme.colors.textTertiary} />
                   <TextInput
                     style={styles.addManualInput}
                     placeholder="Tìm món ăn..."
                     value={manualQuery}
                     onChangeText={setManualQuery}
-                    placeholderTextColor="#9CA3AF"
+                    placeholderTextColor={theme.colors.textTertiary}
                     autoFocus
                   />
                   <TouchableOpacity onPress={() => { setShowAddManual(false); setManualQuery(''); }}>
-                    <Ionicons name="close" size={18} color="#9CA3AF" />
+                    <Ionicons name="close" size={18} color={theme.colors.textTertiary} />
                   </TouchableOpacity>
                 </View>
 
                 {manualSearch.isLoading && (
-                  <ActivityIndicator color="#2ECC71" style={{ marginVertical: 12 }} />
+                  <ActivityIndicator color={theme.colors.primary} style={{ marginVertical: 12 }} />
                 )}
 
                 {((manualSearch.data ?? []) as FoodItem[]).map((food) => (
@@ -352,7 +358,7 @@ export default function MealResultScreen() {
                         {food.typicalPortionG ?? 100}g · {Math.round(food.calPer100g * (food.typicalPortionG ?? 100) / 100)} kcal
                       </Text>
                     </View>
-                    <Ionicons name="add-circle" size={20} color="#2ECC71" />
+                    <Ionicons name="add-circle" size={20} color={theme.colors.primary} />
                   </TouchableOpacity>
                 ))}
 
@@ -364,7 +370,7 @@ export default function MealResultScreen() {
 
             {simplifiedMode && (
               <TouchableOpacity style={styles.detailsToggle} onPress={() => setShowDetailsOverride(false)}>
-                <Ionicons name="chevron-up-outline" size={18} color="#9CA3AF" />
+                <Ionicons name="chevron-up-outline" size={18} color={theme.colors.textTertiary} />
                 <Text style={styles.detailsToggleTextCollapse}>Thu gọn</Text>
               </TouchableOpacity>
             )}
@@ -401,132 +407,134 @@ export default function MealResultScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FBF9' },
-  topBar: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#fff',
-    borderBottomWidth: 1, borderBottomColor: '#F3F4F6',
-  },
-  backBtn: { width: 38, height: 38, justifyContent: 'center', alignItems: 'center' },
-  topTitle: { fontSize: 17, fontWeight: '700', color: '#111827' },
-  photoRow: {
-    flexDirection: 'row', gap: 14, padding: 16,
-    backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#F3F4F6',
-  },
-  thumb: { width: 72, height: 72, borderRadius: 12 },
-  mealLabel: { fontSize: 16, fontWeight: '700', color: '#111827' },
-  mealTime: { fontSize: 13, color: '#9CA3AF', marginTop: 2 },
-  aiBadge: {
-    flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6,
-    backgroundColor: '#F5F3FF', paddingHorizontal: 8, paddingVertical: 3,
-    borderRadius: 20, alignSelf: 'flex-start',
-  },
-  aiBadgeText: { fontSize: 11, color: '#8B5CF6', fontWeight: '600' },
-  totalCard: {
-    backgroundColor: '#fff', margin: 16, borderRadius: 16, padding: 16,
-    shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 8, elevation: 2,
-  },
-  totalTitle: { fontSize: 13, color: '#9CA3AF', marginBottom: 10, fontWeight: '600' },
-  totalRow: { flexDirection: 'row' },
-  totalItem: { flex: 1, alignItems: 'center' },
-  totalVal: { fontSize: 22, fontWeight: '800', color: '#111827' },
-  totalKey: { fontSize: 11, color: '#9CA3AF', marginTop: 2 },
-  alert: {
-    flexDirection: 'row', gap: 8, alignItems: 'flex-start',
-    marginHorizontal: 16, marginBottom: 8,
-    backgroundColor: '#FFFBEB', borderRadius: 10, padding: 10,
-    borderWidth: 1, borderColor: '#FDE68A',
-  },
-  alertText: { flex: 1, fontSize: 13, color: '#92400E' },
-  sectionTitle: {
-    fontSize: 13, fontWeight: '600', color: '#9CA3AF',
-    paddingHorizontal: 20, paddingTop: 8, paddingBottom: 6,
-  },
-  sectionTitleSenior: { fontSize: 16, color: '#6B7280' },
-  simpleList: {
-    backgroundColor: '#fff', marginHorizontal: 16, marginBottom: 4,
-    borderRadius: 16, paddingVertical: 4,
-    shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, elevation: 1,
-  },
-  simpleRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 18, paddingVertical: 14,
-    borderBottomWidth: 1, borderBottomColor: '#F9FAFB',
-  },
-  simpleDishName: { fontSize: 15, fontWeight: '600', color: '#111827', flex: 1 },
-  simpleDishNameSenior: { fontSize: 19 },
-  simpleDishCal: { fontSize: 14, fontWeight: '700', color: '#2ECC71', marginLeft: 12 },
-  simpleDishCalSenior: { fontSize: 18 },
-  detailsToggle: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    marginHorizontal: 16, marginTop: 10, padding: 14,
-    borderRadius: 14, borderWidth: 1.5, borderColor: '#E5E7EB', borderStyle: 'dashed',
-  },
-  detailsToggleText: { fontSize: 14, color: '#2ECC71', fontWeight: '600' },
-  detailsToggleTextSenior: { fontSize: 17 },
-  detailsToggleTextCollapse: { fontSize: 14, color: '#9CA3AF', fontWeight: '600' },
-  dishCard: {
-    backgroundColor: '#fff', marginHorizontal: 16, marginBottom: 10,
-    borderRadius: 16, padding: 14,
-    shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, elevation: 1,
-  },
-  dishHeader: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 10 },
-  dishName: { fontSize: 15, fontWeight: '700', color: '#111827' },
-  dishNameEn: { fontSize: 12, color: '#9CA3AF', marginTop: 1 },
-  confBadge: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 10 },
-  confText: { fontSize: 11, fontWeight: '700' },
-  removeBtn: { padding: 4 },
-  portionRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
-  portionLabel: { fontSize: 13, color: '#6B7280' },
-  portionDisplay: { flexDirection: 'row', alignItems: 'center', gap: 4 },
-  portionValue: { fontSize: 14, fontWeight: '700', color: '#2ECC71' },
-  portionInput: {
-    borderWidth: 1.5, borderColor: '#2ECC71', borderRadius: 8,
-    paddingHorizontal: 10, paddingVertical: 4, fontSize: 14,
-    fontWeight: '700', color: '#2ECC71', minWidth: 60, textAlign: 'center',
-  },
-  macros: {
-    flexDirection: 'row', backgroundColor: '#F9FAFB', borderRadius: 10, padding: 10,
-  },
-  macroItem: { flex: 1, alignItems: 'center' },
-  macroVal: { fontSize: 14, fontWeight: '700', color: '#111827' },
-  macroKey: { fontSize: 10, color: '#9CA3AF', marginTop: 1 },
-  macroDivider: { width: 1, backgroundColor: '#E5E7EB', marginHorizontal: 4 },
-  addManual: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    marginHorizontal: 16, marginTop: 4, padding: 14,
-    borderRadius: 14, borderWidth: 1.5, borderColor: '#E5E7EB', borderStyle: 'dashed',
-  },
-  addManualText: { fontSize: 14, color: '#2ECC71', fontWeight: '600' },
-  addManualPanel: {
-    backgroundColor: '#fff', marginHorizontal: 16, marginTop: 4,
-    borderRadius: 14, borderWidth: 1.5, borderColor: '#E5E7EB', padding: 10,
-  },
-  addManualSearchRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    backgroundColor: '#F9FAFB', borderRadius: 10, paddingHorizontal: 10, height: 40,
-  },
-  addManualInput: { flex: 1, fontSize: 14, color: '#111827' },
-  addManualResult: {
-    flexDirection: 'row', alignItems: 'center', gap: 8,
-    paddingVertical: 10, paddingHorizontal: 4,
-    borderTopWidth: 1, borderTopColor: '#F9FAFB',
-  },
-  addManualResultName: { fontSize: 14, fontWeight: '600', color: '#111827' },
-  addManualResultSub: { fontSize: 12, color: '#9CA3AF', marginTop: 1 },
-  addManualEmpty: { fontSize: 13, color: '#9CA3AF', textAlign: 'center', paddingVertical: 12 },
-  bottomBar: {
-    position: 'absolute', bottom: 0, left: 0, right: 0,
-    backgroundColor: '#fff', padding: 16, paddingBottom: Platform.OS === 'ios' ? 32 : 16,
-    borderTopWidth: 1, borderTopColor: '#F3F4F6',
-  },
-  confirmBtn: {
-    backgroundColor: '#2ECC71', padding: 17, borderRadius: 16, alignItems: 'center',
-    shadowColor: '#2ECC71', shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
-  },
-  confirmBtnSenior: { padding: 21, borderRadius: 18 },
-  confirmBtnDisabled: { backgroundColor: '#9CA3AF' },
-  confirmBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  confirmBtnTextSenior: { fontSize: 19 },
-});
+function createStyles(theme: Theme) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: theme.colors.background },
+    topBar: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+      paddingHorizontal: 16, paddingVertical: 12, backgroundColor: theme.colors.surface,
+      borderBottomWidth: 1, borderBottomColor: theme.colors.divider,
+    },
+    backBtn: { width: 38, height: 38, justifyContent: 'center', alignItems: 'center' },
+    topTitle: { fontSize: 17, fontWeight: '700', color: theme.colors.text },
+    photoRow: {
+      flexDirection: 'row', gap: 14, padding: 16,
+      backgroundColor: theme.colors.surface, borderBottomWidth: 1, borderBottomColor: theme.colors.divider,
+    },
+    thumb: { width: 72, height: 72, borderRadius: 12 },
+    mealLabel: { fontSize: 16, fontWeight: '700', color: theme.colors.text },
+    mealTime: { fontSize: 13, color: theme.colors.textTertiary, marginTop: 2 },
+    aiBadge: {
+      flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 6,
+      backgroundColor: theme.colors.infoBg, paddingHorizontal: 8, paddingVertical: 3,
+      borderRadius: 20, alignSelf: 'flex-start',
+    },
+    aiBadgeText: { fontSize: 11, color: theme.colors.info, fontWeight: '600' },
+    totalCard: {
+      backgroundColor: theme.colors.surface, margin: 16, borderRadius: 16, padding: 16,
+      shadowColor: theme.colors.shadow, shadowOpacity: 0.05, shadowRadius: 8, elevation: 2,
+    },
+    totalTitle: { fontSize: 13, color: theme.colors.textTertiary, marginBottom: 10, fontWeight: '600' },
+    totalRow: { flexDirection: 'row' },
+    totalItem: { flex: 1, alignItems: 'center' },
+    totalVal: { fontSize: 22, fontWeight: '800', color: theme.colors.text },
+    totalKey: { fontSize: 11, color: theme.colors.textTertiary, marginTop: 2 },
+    alert: {
+      flexDirection: 'row', gap: 8, alignItems: 'flex-start',
+      marginHorizontal: 16, marginBottom: 8,
+      backgroundColor: theme.colors.warningBg, borderRadius: 10, padding: 10,
+      borderWidth: 1, borderColor: theme.colors.warningBg,
+    },
+    alertText: { flex: 1, fontSize: 13, color: theme.colors.warning },
+    sectionTitle: {
+      fontSize: 13, fontWeight: '600', color: theme.colors.textTertiary,
+      paddingHorizontal: 20, paddingTop: 8, paddingBottom: 6,
+    },
+    sectionTitleSenior: { fontSize: 16, color: theme.colors.textSecondary },
+    simpleList: {
+      backgroundColor: theme.colors.surface, marginHorizontal: 16, marginBottom: 4,
+      borderRadius: 16, paddingVertical: 4,
+      shadowColor: theme.colors.shadow, shadowOpacity: 0.04, shadowRadius: 6, elevation: 1,
+    },
+    simpleRow: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+      paddingHorizontal: 18, paddingVertical: 14,
+      borderBottomWidth: 1, borderBottomColor: theme.colors.divider,
+    },
+    simpleDishName: { fontSize: 15, fontWeight: '600', color: theme.colors.text, flex: 1 },
+    simpleDishNameSenior: { fontSize: 19 },
+    simpleDishCal: { fontSize: 14, fontWeight: '700', color: theme.colors.primary, marginLeft: 12 },
+    simpleDishCalSenior: { fontSize: 18 },
+    detailsToggle: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+      marginHorizontal: 16, marginTop: 10, padding: 14,
+      borderRadius: 14, borderWidth: 1.5, borderColor: theme.colors.border, borderStyle: 'dashed',
+    },
+    detailsToggleText: { fontSize: 14, color: theme.colors.primary, fontWeight: '600' },
+    detailsToggleTextSenior: { fontSize: 17 },
+    detailsToggleTextCollapse: { fontSize: 14, color: theme.colors.textTertiary, fontWeight: '600' },
+    dishCard: {
+      backgroundColor: theme.colors.surface, marginHorizontal: 16, marginBottom: 10,
+      borderRadius: 16, padding: 14,
+      shadowColor: theme.colors.shadow, shadowOpacity: 0.04, shadowRadius: 6, elevation: 1,
+    },
+    dishHeader: { flexDirection: 'row', alignItems: 'flex-start', marginBottom: 10 },
+    dishName: { fontSize: 15, fontWeight: '700', color: theme.colors.text },
+    dishNameEn: { fontSize: 12, color: theme.colors.textTertiary, marginTop: 1 },
+    confBadge: { paddingHorizontal: 7, paddingVertical: 2, borderRadius: 10 },
+    confText: { fontSize: 11, fontWeight: '700' },
+    removeBtn: { padding: 4 },
+    portionRow: { flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 10 },
+    portionLabel: { fontSize: 13, color: theme.colors.textSecondary },
+    portionDisplay: { flexDirection: 'row', alignItems: 'center', gap: 4 },
+    portionValue: { fontSize: 14, fontWeight: '700', color: theme.colors.primary },
+    portionInput: {
+      borderWidth: 1.5, borderColor: theme.colors.primary, borderRadius: 8,
+      paddingHorizontal: 10, paddingVertical: 4, fontSize: 14,
+      fontWeight: '700', color: theme.colors.primary, minWidth: 60, textAlign: 'center',
+    },
+    macros: {
+      flexDirection: 'row', backgroundColor: theme.colors.divider, borderRadius: 10, padding: 10,
+    },
+    macroItem: { flex: 1, alignItems: 'center' },
+    macroVal: { fontSize: 14, fontWeight: '700', color: theme.colors.text },
+    macroKey: { fontSize: 10, color: theme.colors.textTertiary, marginTop: 1 },
+    macroDivider: { width: 1, backgroundColor: theme.colors.border, marginHorizontal: 4 },
+    addManual: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+      marginHorizontal: 16, marginTop: 4, padding: 14,
+      borderRadius: 14, borderWidth: 1.5, borderColor: theme.colors.border, borderStyle: 'dashed',
+    },
+    addManualText: { fontSize: 14, color: theme.colors.primary, fontWeight: '600' },
+    addManualPanel: {
+      backgroundColor: theme.colors.surface, marginHorizontal: 16, marginTop: 4,
+      borderRadius: 14, borderWidth: 1.5, borderColor: theme.colors.border, padding: 10,
+    },
+    addManualSearchRow: {
+      flexDirection: 'row', alignItems: 'center', gap: 8,
+      backgroundColor: theme.colors.divider, borderRadius: 10, paddingHorizontal: 10, height: 40,
+    },
+    addManualInput: { flex: 1, fontSize: 14, color: theme.colors.text },
+    addManualResult: {
+      flexDirection: 'row', alignItems: 'center', gap: 8,
+      paddingVertical: 10, paddingHorizontal: 4,
+      borderTopWidth: 1, borderTopColor: theme.colors.divider,
+    },
+    addManualResultName: { fontSize: 14, fontWeight: '600', color: theme.colors.text },
+    addManualResultSub: { fontSize: 12, color: theme.colors.textTertiary, marginTop: 1 },
+    addManualEmpty: { fontSize: 13, color: theme.colors.textTertiary, textAlign: 'center', paddingVertical: 12 },
+    bottomBar: {
+      position: 'absolute', bottom: 0, left: 0, right: 0,
+      backgroundColor: theme.colors.surface, padding: 16, paddingBottom: Platform.OS === 'ios' ? 32 : 16,
+      borderTopWidth: 1, borderTopColor: theme.colors.divider,
+    },
+    confirmBtn: {
+      backgroundColor: theme.colors.primary, padding: 17, borderRadius: 16, alignItems: 'center',
+      shadowColor: theme.colors.primary, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
+    },
+    confirmBtnSenior: { padding: 21, borderRadius: 18 },
+    confirmBtnDisabled: { backgroundColor: theme.colors.textTertiary },
+    confirmBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+    confirmBtnTextSenior: { fontSize: 19 },
+  });
+}

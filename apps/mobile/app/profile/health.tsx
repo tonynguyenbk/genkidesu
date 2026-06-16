@@ -5,8 +5,10 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import type { Theme } from '@genki/ui';
 import { trpc } from '../../lib/trpc';
 import { useActiveProfile } from '../../hooks/useActiveProfile';
+import { useAppTheme, useThemedStyles } from '../../contexts/ThemeContext';
 
 const CONDITION_META: Record<string, { label: string; icon: string; desc: string; color: string }> = {
   diabetes_type2: { label: 'Tiểu đường type 2', icon: '🩸', desc: 'Kiểm soát đường huyết, hạn chế carbs', color: '#DC2626' },
@@ -21,6 +23,8 @@ const ALL_CONDITIONS = Object.keys(CONDITION_META) as (keyof typeof CONDITION_ME
 
 export default function HealthConditionsScreen() {
   const router = useRouter();
+  const { theme } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
   const { activeProfile } = useActiveProfile();
   const profileId = activeProfile?.id ?? '';
 
@@ -59,7 +63,7 @@ export default function HealthConditionsScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={22} color="#111827" />
+          <Ionicons name="arrow-back" size={22} color={theme.colors.text} />
         </TouchableOpacity>
         <Text style={styles.title}>Bệnh lý & Chế độ ăn</Text>
         <View style={{ width: 38 }} />
@@ -76,7 +80,7 @@ export default function HealthConditionsScreen() {
           <Text style={styles.sectionLabel}>Bệnh lý hiện tại</Text>
 
           {conditions.isLoading ? (
-            <ActivityIndicator color="#2ECC71" style={{ margin: 20 }} />
+            <ActivityIndicator color={theme.colors.primary} style={{ margin: 20 }} />
           ) : (conditions.data ?? []).length === 0 ? (
             <View style={styles.emptyCard}>
               <Text style={styles.emptyIcon}>✅</Text>
@@ -102,7 +106,7 @@ export default function HealthConditionsScreen() {
                       style={styles.removeBtn}
                       disabled={removeMutation.isPending}
                     >
-                      <Ionicons name="close-circle" size={22} color="#EF4444" />
+                      <Ionicons name="close-circle" size={22} color={theme.colors.error} />
                     </TouchableOpacity>
                   </View>
                 );
@@ -113,13 +117,13 @@ export default function HealthConditionsScreen() {
 
         {/* Add button */}
         <TouchableOpacity style={styles.addBtn} onPress={() => setShowAddModal(true)}>
-          <Ionicons name="add-circle-outline" size={20} color="#2ECC71" />
+          <Ionicons name="add-circle-outline" size={20} color={theme.colors.primary} />
           <Text style={styles.addBtnText}>Thêm bệnh lý</Text>
         </TouchableOpacity>
 
         {/* Info box */}
         <View style={styles.infoBox}>
-          <Ionicons name="information-circle-outline" size={18} color="#2563EB" />
+          <Ionicons name="information-circle-outline" size={18} color={theme.colors.info} />
           <Text style={styles.infoText}>
             Thông tin bệnh lý chỉ dùng để tạo cảnh báo dinh dưỡng — không được chia sẻ ra ngoài ứng dụng.
           </Text>
@@ -135,7 +139,7 @@ export default function HealthConditionsScreen() {
             <View style={styles.sheetHeader}>
               <Text style={styles.sheetTitle}>Chọn bệnh lý</Text>
               <TouchableOpacity onPress={() => setShowAddModal(false)}>
-                <Ionicons name="close" size={22} color="#6B7280" />
+                <Ionicons name="close" size={22} color={theme.colors.textSecondary} />
               </TouchableOpacity>
             </View>
 
@@ -156,13 +160,13 @@ export default function HealthConditionsScreen() {
                   >
                     <Text style={styles.optionIcon}>{meta.icon}</Text>
                     <View style={{ flex: 1 }}>
-                      <Text style={[styles.optionLabel, already && { color: '#9CA3AF' }]}>{meta.label}</Text>
+                      <Text style={[styles.optionLabel, already && { color: theme.colors.textTertiary }]}>{meta.label}</Text>
                       <Text style={styles.optionDesc}>{meta.desc}</Text>
                     </View>
                     {already ? (
-                      <Ionicons name="checkmark-circle" size={20} color="#9CA3AF" />
+                      <Ionicons name="checkmark-circle" size={20} color={theme.colors.textTertiary} />
                     ) : (
-                      <Ionicons name="add-circle-outline" size={20} color="#2ECC71" />
+                      <Ionicons name="add-circle-outline" size={20} color={theme.colors.primary} />
                     )}
                   </TouchableOpacity>
                 );
@@ -176,65 +180,67 @@ export default function HealthConditionsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FBF9' },
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 14,
-    borderBottomWidth: 1, borderBottomColor: '#F3F4F6',
-    backgroundColor: '#fff',
-  },
-  backBtn: { width: 38, height: 38, justifyContent: 'center' },
-  title: { fontSize: 17, fontWeight: '700', color: '#111827' },
-  subtitle: { fontSize: 14, color: '#6B7280', lineHeight: 22, margin: 16 },
-  section: { marginHorizontal: 16, marginBottom: 12 },
-  sectionLabel: { fontSize: 12, fontWeight: '600', color: '#9CA3AF', marginBottom: 8, paddingLeft: 2 },
-  card: {
-    backgroundColor: '#fff', borderRadius: 16, overflow: 'hidden',
-    shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 2,
-  },
-  emptyCard: {
-    backgroundColor: '#fff', borderRadius: 16, padding: 24,
-    alignItems: 'center', gap: 8,
-    shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 2,
-  },
-  emptyIcon: { fontSize: 32 },
-  emptyText: { fontSize: 14, color: '#9CA3AF', textAlign: 'center' },
-  conditionRow: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 },
-  conditionRowBorder: { borderBottomWidth: 1, borderBottomColor: '#F9FAFB' },
-  conditionIcon: { fontSize: 24 },
-  conditionLabel: { fontSize: 14, fontWeight: '600', color: '#111827' },
-  conditionDesc: { fontSize: 12, color: '#9CA3AF', marginTop: 2 },
-  removeBtn: { padding: 4 },
-  addBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    marginHorizontal: 16, paddingVertical: 14, borderRadius: 14,
-    borderWidth: 1.5, borderColor: '#2ECC71', borderStyle: 'dashed', backgroundColor: '#F0FDF4',
-  },
-  addBtnText: { fontSize: 14, fontWeight: '600', color: '#2ECC71' },
-  infoBox: {
-    flexDirection: 'row', alignItems: 'flex-start', gap: 10,
-    margin: 16, padding: 14, backgroundColor: '#EFF6FF',
-    borderRadius: 12, borderWidth: 1, borderColor: '#BFDBFE',
-  },
-  infoText: { flex: 1, fontSize: 12, color: '#1D4ED8', lineHeight: 18 },
-  overlay: { flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' },
-  sheet: {
-    backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24,
-    paddingBottom: 32, maxHeight: '80%',
-  },
-  sheetHeader: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    padding: 20, borderBottomWidth: 1, borderBottomColor: '#F3F4F6',
-  },
-  sheetTitle: { fontSize: 17, fontWeight: '700', color: '#111827' },
-  optionRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    paddingHorizontal: 20, paddingVertical: 14,
-    borderBottomWidth: 1, borderBottomColor: '#F9FAFB',
-  },
-  optionRowActive: { backgroundColor: '#F9FAFB' },
-  optionIcon: { fontSize: 22 },
-  optionLabel: { fontSize: 14, fontWeight: '600', color: '#111827' },
-  optionDesc: { fontSize: 12, color: '#9CA3AF', marginTop: 2 },
-});
+function createStyles(theme: Theme) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: theme.colors.background },
+    header: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+      paddingHorizontal: 16, paddingVertical: 14,
+      borderBottomWidth: 1, borderBottomColor: theme.colors.divider,
+      backgroundColor: theme.colors.surface,
+    },
+    backBtn: { width: 38, height: 38, justifyContent: 'center' },
+    title: { fontSize: 17, fontWeight: '700', color: theme.colors.text },
+    subtitle: { fontSize: 14, color: theme.colors.textSecondary, lineHeight: 22, margin: 16 },
+    section: { marginHorizontal: 16, marginBottom: 12 },
+    sectionLabel: { fontSize: 12, fontWeight: '600', color: theme.colors.textTertiary, marginBottom: 8, paddingLeft: 2 },
+    card: {
+      backgroundColor: theme.colors.surface, borderRadius: 16, overflow: 'hidden',
+      shadowColor: theme.colors.shadow, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2,
+    },
+    emptyCard: {
+      backgroundColor: theme.colors.surface, borderRadius: 16, padding: 24,
+      alignItems: 'center', gap: 8,
+      shadowColor: theme.colors.shadow, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2,
+    },
+    emptyIcon: { fontSize: 32 },
+    emptyText: { fontSize: 14, color: theme.colors.textTertiary, textAlign: 'center' },
+    conditionRow: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 },
+    conditionRowBorder: { borderBottomWidth: 1, borderBottomColor: theme.colors.divider },
+    conditionIcon: { fontSize: 24 },
+    conditionLabel: { fontSize: 14, fontWeight: '600', color: theme.colors.text },
+    conditionDesc: { fontSize: 12, color: theme.colors.textTertiary, marginTop: 2 },
+    removeBtn: { padding: 4 },
+    addBtn: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+      marginHorizontal: 16, paddingVertical: 14, borderRadius: 14,
+      borderWidth: 1.5, borderColor: theme.colors.primary, borderStyle: 'dashed', backgroundColor: theme.colors.surfaceAlt,
+    },
+    addBtnText: { fontSize: 14, fontWeight: '600', color: theme.colors.primary },
+    infoBox: {
+      flexDirection: 'row', alignItems: 'flex-start', gap: 10,
+      margin: 16, padding: 14, backgroundColor: theme.colors.infoBg,
+      borderRadius: 12, borderWidth: 1, borderColor: theme.colors.info,
+    },
+    infoText: { flex: 1, fontSize: 12, color: theme.colors.info, lineHeight: 18 },
+    overlay: { flex: 1, backgroundColor: theme.colors.overlay, justifyContent: 'flex-end' },
+    sheet: {
+      backgroundColor: theme.colors.surface, borderTopLeftRadius: 24, borderTopRightRadius: 24,
+      paddingBottom: 32, maxHeight: '80%',
+    },
+    sheetHeader: {
+      flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+      padding: 20, borderBottomWidth: 1, borderBottomColor: theme.colors.divider,
+    },
+    sheetTitle: { fontSize: 17, fontWeight: '700', color: theme.colors.text },
+    optionRow: {
+      flexDirection: 'row', alignItems: 'center', gap: 12,
+      paddingHorizontal: 20, paddingVertical: 14,
+      borderBottomWidth: 1, borderBottomColor: theme.colors.divider,
+    },
+    optionRowActive: { backgroundColor: theme.colors.divider },
+    optionIcon: { fontSize: 22 },
+    optionLabel: { fontSize: 14, fontWeight: '600', color: theme.colors.text },
+    optionDesc: { fontSize: 12, color: theme.colors.textTertiary, marginTop: 2 },
+  });
+}

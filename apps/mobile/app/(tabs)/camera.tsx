@@ -6,9 +6,11 @@ import {
 import * as ImagePicker from 'expo-image-picker';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import type { Theme } from '@genki/ui';
 import { trpc } from '../../lib/trpc';
 import { useProfileTheme } from '../../hooks/useProfileTheme';
 import { useActiveProfile } from '../../hooks/useActiveProfile';
+import { useAppTheme, useThemedStyles } from '../../contexts/ThemeContext';
 
 type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
 
@@ -29,6 +31,8 @@ function getDefaultMealType(): MealType {
 
 export default function CameraScreen() {
   const router = useRouter();
+  const styles = useThemedStyles(createStyles);
+  const { theme } = useAppTheme();
   const [imageUri, setImageUri] = useState<string | null>(null);
   const [mealType, setMealType] = useState<MealType>(getDefaultMealType());
   const [scanning, setScanning] = useState(false);
@@ -118,7 +122,7 @@ export default function CameraScreen() {
               <Text style={styles.babyBannerTitle}>Ghi nhận bữa ăn cho bé</Text>
               <Text style={styles.babyBannerSub}>Sữa mẹ · Sữa công thức · Ăn dặm</Text>
             </View>
-            <Ionicons name="chevron-forward" size={18} color="#DB2777" />
+            <Ionicons name="chevron-forward" size={18} color={theme.colors.primary} />
           </TouchableOpacity>
         )}
 
@@ -149,7 +153,7 @@ export default function CameraScreen() {
         ) : (
           <View style={styles.uploadArea}>
             <View style={styles.uploadIcon}>
-              <Ionicons name="camera" size={48} color="#2ECC71" />
+              <Ionicons name="camera" size={48} color={theme.colors.primary} />
             </View>
             <Text style={styles.uploadTitle}>Chụp ảnh bữa ăn</Text>
             <Text style={styles.uploadSub}>AI sẽ nhận diện món ăn và tính dinh dưỡng tự động</Text>
@@ -160,7 +164,7 @@ export default function CameraScreen() {
                   style={[styles.uploadBtn, { minHeight: buttonHeight }, isSenior && styles.uploadBtnSenior]}
                   onPress={() => pickImage(true)}
                 >
-                  <Ionicons name="camera-outline" size={isSenior ? 28 : 22} color="#2ECC71" />
+                  <Ionicons name="camera-outline" size={isSenior ? 28 : 22} color={theme.colors.primary} />
                   <Text style={[styles.uploadBtnText, isSenior && styles.uploadBtnTextSenior]}>Mở camera</Text>
                 </TouchableOpacity>
               )}
@@ -173,7 +177,7 @@ export default function CameraScreen() {
                 ]}
                 onPress={() => pickImage(false)}
               >
-                <Ionicons name="image-outline" size={isSenior ? 28 : 22} color="#2ECC71" />
+                <Ionicons name="image-outline" size={isSenior ? 28 : 22} color={theme.colors.primary} />
                 <Text style={[styles.uploadBtnText, isSenior && styles.uploadBtnTextSenior]}>
                   {Platform.OS === 'web' ? 'Chọn ảnh từ máy tính' : 'Chọn từ thư viện'}
                 </Text>
@@ -222,7 +226,7 @@ export default function CameraScreen() {
               }
             }}
           >
-            <Ionicons name="search" size={18} color="#6B7280" />
+            <Ionicons name="search" size={18} color={theme.colors.textSecondary} />
             <Text style={styles.manualText}>Nhập tay món ăn</Text>
           </TouchableOpacity>
         )}
@@ -247,82 +251,84 @@ export default function CameraScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FBF9' },
-  header: {
-    paddingHorizontal: 20, paddingTop: Platform.OS === 'web' ? 20 : 8, paddingBottom: 12,
-  },
-  title: { fontSize: 24, fontWeight: '800', color: '#111827' },
-  sub: { fontSize: 13, color: '#9CA3AF', marginTop: 2 },
+function createStyles(theme: Theme) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: theme.colors.background },
+    header: {
+      paddingHorizontal: 20, paddingTop: Platform.OS === 'web' ? 20 : 8, paddingBottom: 12,
+    },
+    title: { fontSize: 24, fontWeight: '800', color: theme.colors.text },
+    sub: { fontSize: 13, color: theme.colors.textTertiary, marginTop: 2 },
 
-  mealTypeRow: { flexDirection: 'row', paddingHorizontal: 16, gap: 8, marginBottom: 16 },
-  mealTypeBtn: {
-    flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 12,
-    backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#E5E7EB',
-  },
-  mealTypeBtnActive: { borderColor: '#2ECC71', backgroundColor: '#F0FDF4' },
-  mealTypeIcon: { fontSize: 18, marginBottom: 2 },
-  mealTypeLabel: { fontSize: 10, color: '#9CA3AF', fontWeight: '500' },
-  mealTypeLabelActive: { color: '#2ECC71' },
+    mealTypeRow: { flexDirection: 'row', paddingHorizontal: 16, gap: 8, marginBottom: 16 },
+    mealTypeBtn: {
+      flex: 1, alignItems: 'center', paddingVertical: 10, borderRadius: 12,
+      backgroundColor: theme.colors.surface, borderWidth: 1.5, borderColor: theme.colors.border,
+    },
+    mealTypeBtnActive: { borderColor: theme.colors.primary, backgroundColor: theme.colors.surfaceAlt },
+    mealTypeIcon: { fontSize: 18, marginBottom: 2 },
+    mealTypeLabel: { fontSize: 10, color: theme.colors.textTertiary, fontWeight: '500' },
+    mealTypeLabelActive: { color: theme.colors.primary },
 
-  uploadArea: {
-    backgroundColor: '#fff', borderRadius: 20, marginHorizontal: 16,
-    padding: 32, alignItems: 'center',
-    borderWidth: 2, borderColor: '#E5E7EB', borderStyle: 'dashed',
-  },
-  uploadIcon: {
-    width: 88, height: 88, borderRadius: 44,
-    backgroundColor: '#F0FDF4', justifyContent: 'center', alignItems: 'center', marginBottom: 16,
-  },
-  uploadTitle: { fontSize: 18, fontWeight: '700', color: '#111827', marginBottom: 6 },
-  uploadSub: { fontSize: 13, color: '#9CA3AF', textAlign: 'center', marginBottom: 24, lineHeight: 20 },
-  uploadButtons: { flexDirection: 'row', gap: 10, width: '100%' },
-  uploadButtonsSenior: { flexDirection: 'column' },
-  uploadBtn: {
-    flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    paddingVertical: 13, borderRadius: 12, borderWidth: 1.5, borderColor: '#2ECC71',
-    backgroundColor: '#F0FDF4',
-  },
-  uploadBtnFull: { flex: 1 },
-  uploadBtnSenior: { borderRadius: 16, borderWidth: 2 },
-  uploadBtnText: { fontSize: 13, fontWeight: '600', color: '#2ECC71' },
-  uploadBtnTextSenior: { fontSize: 17 },
+    uploadArea: {
+      backgroundColor: theme.colors.surface, borderRadius: 20, marginHorizontal: 16,
+      padding: 32, alignItems: 'center',
+      borderWidth: 2, borderColor: theme.colors.border, borderStyle: 'dashed',
+    },
+    uploadIcon: {
+      width: 88, height: 88, borderRadius: 44,
+      backgroundColor: theme.colors.surfaceAlt, justifyContent: 'center', alignItems: 'center', marginBottom: 16,
+    },
+    uploadTitle: { fontSize: 18, fontWeight: '700', color: theme.colors.text, marginBottom: 6 },
+    uploadSub: { fontSize: 13, color: theme.colors.textTertiary, textAlign: 'center', marginBottom: 24, lineHeight: 20 },
+    uploadButtons: { flexDirection: 'row', gap: 10, width: '100%' },
+    uploadButtonsSenior: { flexDirection: 'column' },
+    uploadBtn: {
+      flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+      paddingVertical: 13, borderRadius: 12, borderWidth: 1.5, borderColor: theme.colors.primary,
+      backgroundColor: theme.colors.surfaceAlt,
+    },
+    uploadBtnFull: { flex: 1 },
+    uploadBtnSenior: { borderRadius: 16, borderWidth: 2 },
+    uploadBtnText: { fontSize: 13, fontWeight: '600', color: theme.colors.primary },
+    uploadBtnTextSenior: { fontSize: 17 },
 
-  imageContainer: { marginHorizontal: 16, borderRadius: 20, overflow: 'hidden', position: 'relative' },
-  previewImage: { width: '100%', height: 260 },
-  changeBtn: {
-    position: 'absolute', top: 12, right: 12,
-    backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 14,
-  },
+    imageContainer: { marginHorizontal: 16, borderRadius: 20, overflow: 'hidden', position: 'relative' },
+    previewImage: { width: '100%', height: 260 },
+    changeBtn: {
+      position: 'absolute', top: 12, right: 12,
+      backgroundColor: theme.colors.overlay, borderRadius: 14,
+    },
 
-  scanBtn: {
-    marginHorizontal: 16, marginTop: 16, backgroundColor: '#2ECC71',
-    padding: 17, borderRadius: 16,
-    shadowColor: '#2ECC71', shadowOpacity: 0.35, shadowRadius: 10, elevation: 5,
-  },
-  scanBtnLoading: { backgroundColor: '#6EE7A0' },
-  scanBtnSenior: { borderRadius: 18, padding: 19 },
-  scanBtnInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
-  scanBtnText: { fontSize: 17, fontWeight: '700', color: '#fff' },
-  scanBtnTextSenior: { fontSize: 19 },
+    scanBtn: {
+      marginHorizontal: 16, marginTop: 16, backgroundColor: theme.colors.primary,
+      padding: 17, borderRadius: 16,
+      shadowColor: theme.colors.primary, shadowOpacity: 0.35, shadowRadius: 10, elevation: 5,
+    },
+    scanBtnLoading: { backgroundColor: theme.colors.success },
+    scanBtnSenior: { borderRadius: 18, padding: 19 },
+    scanBtnInner: { flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10 },
+    scanBtnText: { fontSize: 17, fontWeight: '700', color: '#fff' },
+    scanBtnTextSenior: { fontSize: 19 },
 
-  manualBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    marginHorizontal: 16, marginTop: 12, padding: 14, borderRadius: 14,
-    borderWidth: 1.5, borderColor: '#E5E7EB', backgroundColor: '#fff',
-  },
-  manualText: { fontSize: 14, color: '#6B7280', fontWeight: '500' },
-  tips: {
-    margin: 16, backgroundColor: '#FFFBEB', borderRadius: 16, padding: 16,
-    borderWidth: 1, borderColor: '#FDE68A',
-  },
-  tipsTitle: { fontSize: 14, fontWeight: '700', color: '#92400E', marginBottom: 8 },
-  tipItem: { fontSize: 13, color: '#B45309', lineHeight: 22 },
-  babyBanner: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    backgroundColor: '#FFF5F9', borderRadius: 16, marginHorizontal: 16, marginBottom: 16,
-    padding: 16, borderWidth: 1.5, borderColor: '#F9A8D4',
-  },
-  babyBannerTitle: { fontSize: 15, fontWeight: '700', color: '#DB2777' },
-  babyBannerSub: { fontSize: 12, color: '#F472B6', marginTop: 2 },
-});
+    manualBtn: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+      marginHorizontal: 16, marginTop: 12, padding: 14, borderRadius: 14,
+      borderWidth: 1.5, borderColor: theme.colors.border, backgroundColor: theme.colors.surface,
+    },
+    manualText: { fontSize: 14, color: theme.colors.textSecondary, fontWeight: '500' },
+    tips: {
+      margin: 16, backgroundColor: theme.colors.warningBg, borderRadius: 16, padding: 16,
+      borderWidth: 1, borderColor: theme.colors.warning,
+    },
+    tipsTitle: { fontSize: 14, fontWeight: '700', color: theme.colors.warning, marginBottom: 8 },
+    tipItem: { fontSize: 13, color: theme.colors.warning, lineHeight: 22 },
+    babyBanner: {
+      flexDirection: 'row', alignItems: 'center', gap: 12,
+      backgroundColor: theme.colors.surfaceAlt, borderRadius: 16, marginHorizontal: 16, marginBottom: 16,
+      padding: 16, borderWidth: 1.5, borderColor: theme.colors.primary,
+    },
+    babyBannerTitle: { fontSize: 15, fontWeight: '700', color: theme.colors.primary },
+    babyBannerSub: { fontSize: 12, color: theme.colors.secondary, marginTop: 2 },
+  });
+}

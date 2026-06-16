@@ -2,8 +2,10 @@ import { useMemo, useState } from 'react';
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Platform, ActivityIndicator } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import type { Theme } from '@genki/ui';
 import { trpc } from '../../lib/trpc';
 import { useActiveProfile } from '../../hooks/useActiveProfile';
+import { useAppTheme, useThemedStyles } from '../../contexts/ThemeContext';
 
 const MEAL_LABELS: Record<string, string> = {
   breakfast: '🌅 Sáng', lunch: '☀️ Trưa', dinner: '🌙 Tối', snack: '🍎 Snack',
@@ -16,6 +18,8 @@ function formatDate(d: Date): string {
 export default function MealHistoryScreen() {
   const router = useRouter();
   const [dateOffset, setDateOffset] = useState(0); // 0=today, 1=yesterday, etc.
+  const { theme } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
 
   const { activeProfile: profile } = useActiveProfile();
 
@@ -43,7 +47,7 @@ export default function MealHistoryScreen() {
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={22} color="#111827" />
+          <Ionicons name="arrow-back" size={22} color={theme.colors.text} />
         </TouchableOpacity>
         <Text style={styles.title}>Lịch sử bữa ăn</Text>
         <View style={{ width: 38 }} />
@@ -52,7 +56,7 @@ export default function MealHistoryScreen() {
       {/* Date navigation */}
       <View style={styles.dateNav}>
         <TouchableOpacity onPress={() => setDateOffset(d => d + 1)} style={styles.navBtn}>
-          <Ionicons name="chevron-back" size={20} color="#374151" />
+          <Ionicons name="chevron-back" size={20} color={theme.colors.text} />
         </TouchableOpacity>
         <View style={styles.dateCenter}>
           <Text style={styles.dateLabel}>{dateLabel}</Text>
@@ -63,7 +67,7 @@ export default function MealHistoryScreen() {
           style={[styles.navBtn, dateOffset === 0 && styles.navBtnDisabled]}
           disabled={dateOffset === 0}
         >
-          <Ionicons name="chevron-forward" size={20} color={dateOffset === 0 ? '#D1D5DB' : '#374151'} />
+          <Ionicons name="chevron-forward" size={20} color={dateOffset === 0 ? theme.colors.textTertiary : theme.colors.text} />
         </TouchableOpacity>
       </View>
 
@@ -73,10 +77,10 @@ export default function MealHistoryScreen() {
           <View style={styles.summaryCard}>
             <View style={styles.summaryRow}>
               {[
-                { label: 'Calories', val: Math.round(summary.data.totalCalories), unit: 'kcal', color: '#2ECC71' },
-                { label: 'Protein', val: Math.round(summary.data.totalProteinG), unit: 'g', color: '#3B82F6' },
-                { label: 'Carbs', val: Math.round(summary.data.totalCarbsG), unit: 'g', color: '#F59E0B' },
-                { label: 'Fat', val: Math.round(summary.data.totalFatG), unit: 'g', color: '#EF4444' },
+                { label: 'Calories', val: Math.round(summary.data.totalCalories), unit: 'kcal', color: theme.colors.primary },
+                { label: 'Protein', val: Math.round(summary.data.totalProteinG), unit: 'g', color: theme.colors.info },
+                { label: 'Carbs', val: Math.round(summary.data.totalCarbsG), unit: 'g', color: theme.colors.warning },
+                { label: 'Fat', val: Math.round(summary.data.totalFatG), unit: 'g', color: theme.colors.error },
               ].map((m) => (
                 <View key={m.label} style={styles.summaryItem}>
                   <Text style={[styles.summaryVal, { color: m.color }]}>{m.val}</Text>
@@ -90,7 +94,7 @@ export default function MealHistoryScreen() {
 
         {/* Meal logs */}
         {logs.isLoading ? (
-          <ActivityIndicator color="#2ECC71" style={{ marginTop: 40 }} />
+          <ActivityIndicator color={theme.colors.primary} style={{ marginTop: 40 }} />
         ) : logs.data?.length === 0 ? (
           <View style={styles.empty}>
             <Text style={{ fontSize: 40 }}>🍽️</Text>
@@ -132,58 +136,60 @@ export default function MealHistoryScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FBF9' },
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#fff',
-    borderBottomWidth: 1, borderBottomColor: '#F3F4F6',
-  },
-  backBtn: { width: 38, height: 38, justifyContent: 'center', alignItems: 'center' },
-  title: { fontSize: 17, fontWeight: '700', color: '#111827' },
-  dateNav: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#fff',
-    borderBottomWidth: 1, borderBottomColor: '#F3F4F6',
-  },
-  navBtn: { width: 36, height: 36, justifyContent: 'center', alignItems: 'center', borderRadius: 18, backgroundColor: '#F3F4F6' },
-  navBtnDisabled: { backgroundColor: '#F9FAFB' },
-  dateCenter: { alignItems: 'center' },
-  dateLabel: { fontSize: 16, fontWeight: '700', color: '#111827' },
-  dateSub: { fontSize: 12, color: '#9CA3AF', marginTop: 1 },
-  summaryCard: {
-    backgroundColor: '#fff', margin: 16, borderRadius: 16, padding: 16,
-    shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 2,
-  },
-  summaryRow: { flexDirection: 'row' },
-  summaryItem: { flex: 1, alignItems: 'center' },
-  summaryVal: { fontSize: 20, fontWeight: '800' },
-  summaryUnit: { fontSize: 10, color: '#9CA3AF' },
-  summaryLabel: { fontSize: 11, color: '#9CA3AF', marginTop: 2 },
-  logList: { paddingHorizontal: 16, gap: 12 },
-  logCard: {
-    backgroundColor: '#fff', borderRadius: 16, overflow: 'hidden',
-    shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 6, elevation: 1,
-  },
-  logHeader: {
-    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 12,
-    borderBottomWidth: 1, borderBottomColor: '#F9FAFB', gap: 8,
-  },
-  logMealType: { flex: 1, fontSize: 14, fontWeight: '700', color: '#111827' },
-  logTime: { fontSize: 12, color: '#9CA3AF' },
-  logCal: { fontSize: 14, fontWeight: '700', color: '#2ECC71' },
-  itemRow: {
-    flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 10,
-    borderBottomWidth: 1, borderBottomColor: '#F9FAFB',
-  },
-  itemName: { flex: 1, fontSize: 13, color: '#374151' },
-  itemPortion: { fontSize: 12, color: '#9CA3AF', marginHorizontal: 8 },
-  itemCal: { fontSize: 13, fontWeight: '600', color: '#6B7280' },
-  empty: { alignItems: 'center', paddingTop: 48, gap: 12 },
-  emptyTitle: { fontSize: 15, color: '#9CA3AF' },
-  logBtn: {
-    backgroundColor: '#2ECC71', paddingHorizontal: 24, paddingVertical: 12,
-    borderRadius: 12, marginTop: 4,
-  },
-  logBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
-});
+function createStyles(theme: Theme) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: theme.colors.background },
+    header: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+      paddingHorizontal: 16, paddingVertical: 12, backgroundColor: theme.colors.surface,
+      borderBottomWidth: 1, borderBottomColor: theme.colors.divider,
+    },
+    backBtn: { width: 38, height: 38, justifyContent: 'center', alignItems: 'center' },
+    title: { fontSize: 17, fontWeight: '700', color: theme.colors.text },
+    dateNav: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+      paddingHorizontal: 16, paddingVertical: 12, backgroundColor: theme.colors.surface,
+      borderBottomWidth: 1, borderBottomColor: theme.colors.divider,
+    },
+    navBtn: { width: 36, height: 36, justifyContent: 'center', alignItems: 'center', borderRadius: 18, backgroundColor: theme.colors.divider },
+    navBtnDisabled: { backgroundColor: theme.colors.background },
+    dateCenter: { alignItems: 'center' },
+    dateLabel: { fontSize: 16, fontWeight: '700', color: theme.colors.text },
+    dateSub: { fontSize: 12, color: theme.colors.textTertiary, marginTop: 1 },
+    summaryCard: {
+      backgroundColor: theme.colors.surface, margin: 16, borderRadius: 16, padding: 16,
+      shadowColor: theme.colors.shadow, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2,
+    },
+    summaryRow: { flexDirection: 'row' },
+    summaryItem: { flex: 1, alignItems: 'center' },
+    summaryVal: { fontSize: 20, fontWeight: '800' },
+    summaryUnit: { fontSize: 10, color: theme.colors.textTertiary },
+    summaryLabel: { fontSize: 11, color: theme.colors.textTertiary, marginTop: 2 },
+    logList: { paddingHorizontal: 16, gap: 12 },
+    logCard: {
+      backgroundColor: theme.colors.surface, borderRadius: 16, overflow: 'hidden',
+      shadowColor: theme.colors.shadow, shadowOpacity: 0.04, shadowRadius: 6, elevation: 1,
+    },
+    logHeader: {
+      flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 12,
+      borderBottomWidth: 1, borderBottomColor: theme.colors.divider, gap: 8,
+    },
+    logMealType: { flex: 1, fontSize: 14, fontWeight: '700', color: theme.colors.text },
+    logTime: { fontSize: 12, color: theme.colors.textTertiary },
+    logCal: { fontSize: 14, fontWeight: '700', color: theme.colors.primary },
+    itemRow: {
+      flexDirection: 'row', alignItems: 'center', paddingHorizontal: 14, paddingVertical: 10,
+      borderBottomWidth: 1, borderBottomColor: theme.colors.divider,
+    },
+    itemName: { flex: 1, fontSize: 13, color: theme.colors.text },
+    itemPortion: { fontSize: 12, color: theme.colors.textTertiary, marginHorizontal: 8 },
+    itemCal: { fontSize: 13, fontWeight: '600', color: theme.colors.textSecondary },
+    empty: { alignItems: 'center', paddingTop: 48, gap: 12 },
+    emptyTitle: { fontSize: 15, color: theme.colors.textTertiary },
+    logBtn: {
+      backgroundColor: theme.colors.primary, paddingHorizontal: 24, paddingVertical: 12,
+      borderRadius: 12, marginTop: 4,
+    },
+    logBtnText: { color: '#fff', fontWeight: '700', fontSize: 14 },
+  });
+}

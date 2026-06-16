@@ -1,14 +1,18 @@
 import { Redirect } from 'expo-router';
 import { View, ActivityIndicator, StyleSheet } from 'react-native';
+import type { Theme } from '@genki/ui';
 import { useAuth } from '../hooks/useAuth';
+import { useAppTheme, useThemedStyles } from '../contexts/ThemeContext';
 
 export default function Index() {
   const { token, loading } = useAuth();
+  const { theme } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
 
   if (loading) {
     return (
       <View style={styles.splash}>
-        <ActivityIndicator size="large" color="#2ECC71" />
+        <ActivityIndicator size="large" color={theme.colors.primary} />
       </View>
     );
   }
@@ -16,6 +20,8 @@ export default function Index() {
   return <Redirect href={token ? '/(tabs)' : '/(auth)/login'} />;
 }
 
-const styles = StyleSheet.create({
-  splash: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: '#F0FDF4' },
-});
+function createStyles(theme: Theme) {
+  return StyleSheet.create({
+    splash: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: theme.colors.surfaceAlt },
+  });
+}

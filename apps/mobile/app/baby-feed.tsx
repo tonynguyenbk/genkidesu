@@ -5,8 +5,10 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import type { Theme } from '@genki/ui';
 import { trpc, queryClient } from '../lib/trpc';
 import { useActiveProfile } from '../hooks/useActiveProfile';
+import { useAppTheme, useThemedStyles } from '../contexts/ThemeContext';
 
 type FeedType = 'breast_milk' | 'formula' | 'solid';
 
@@ -31,6 +33,8 @@ const MEAL_TYPE_MAP: Record<FeedType, 'baby_meal' | 'formula'> = {
 
 export default function BabyFeedScreen() {
   const router = useRouter();
+  const { theme } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
   const [step, setStep] = useState<1 | 2>(1);
   const [feedType, setFeedType] = useState<FeedType>('breast_milk');
   const [amount, setAmount] = useState('');
@@ -80,7 +84,7 @@ export default function BabyFeedScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => (step === 2 ? setStep(1) : router.back())} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={22} color="#374151" />
+          <Ionicons name="arrow-back" size={22} color={theme.colors.text} />
         </TouchableOpacity>
         <Text style={styles.title}>Ghi nhận bữa ăn</Text>
         <View style={{ width: 38 }} />
@@ -114,7 +118,7 @@ export default function BabyFeedScreen() {
                     <Text style={styles.optionUnit}>Đơn vị: {opt.unit}</Text>
                   </View>
                   {feedType === opt.type && (
-                    <Ionicons name="checkmark-circle" size={22} color="#EC4899" style={{ marginLeft: 'auto' as any }} />
+                    <Ionicons name="checkmark-circle" size={22} color={theme.colors.primary} style={{ marginLeft: 'auto' as any }} />
                   )}
                 </TouchableOpacity>
               ))}
@@ -138,7 +142,7 @@ export default function BabyFeedScreen() {
                 onChangeText={setAmount}
                 keyboardType="decimal-pad"
                 placeholder={String(selected.defaultAmount)}
-                placeholderTextColor="#D1D5DB"
+                placeholderTextColor={theme.colors.textTertiary}
                 autoFocus
               />
               <Text style={styles.amountUnit}>{selected.unit}</Text>
@@ -167,10 +171,10 @@ export default function BabyFeedScreen() {
               <Text style={styles.nutritionTitle}>Dinh dưỡng ước tính</Text>
               <View style={styles.nutritionRow}>
                 {[
-                  { label: 'Calories', val: calories, unit: 'kcal', color: '#EC4899' },
-                  { label: 'Protein', val: protein, unit: 'g', color: '#3B82F6' },
-                  { label: 'Carbs', val: carbs, unit: 'g', color: '#F59E0B' },
-                  { label: 'Fat', val: fat, unit: 'g', color: '#6B7280' },
+                  { label: 'Calories', val: calories, unit: 'kcal', color: theme.colors.primary },
+                  { label: 'Protein', val: protein, unit: 'g', color: theme.colors.info },
+                  { label: 'Carbs', val: carbs, unit: 'g', color: theme.colors.warning },
+                  { label: 'Fat', val: fat, unit: 'g', color: theme.colors.textSecondary },
                 ].map((n) => (
                   <View key={n.label} style={styles.nutritionItem}>
                     <Text style={[styles.nutritionVal, { color: n.color }]}>{n.val}</Text>
@@ -201,67 +205,69 @@ export default function BabyFeedScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#FFF5F9' },
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#fff',
-    borderBottomWidth: 1, borderBottomColor: '#FCE7F3',
-  },
-  backBtn: { width: 38, height: 38, justifyContent: 'center', alignItems: 'center' },
-  title: { fontSize: 17, fontWeight: '700', color: '#111827' },
-  dots: { flexDirection: 'row', justifyContent: 'center', gap: 8, paddingVertical: 16 },
-  dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: '#FCE7F3' },
-  dotActive: { backgroundColor: '#EC4899', width: 20 },
-  content: { padding: 20, gap: 20, paddingBottom: 48 },
-  stepTitle: { fontSize: 24, fontWeight: '800', color: '#111827' },
-  stepSub: { fontSize: 14, color: '#9CA3AF', marginTop: -12 },
-  optionList: { gap: 12 },
-  optionCard: {
-    flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16,
-    backgroundColor: '#fff', borderRadius: 16, borderWidth: 2, borderColor: '#FCE7F3',
-  },
-  optionCardActive: { borderColor: '#EC4899', backgroundColor: '#FFF5F9' },
-  optionEmoji: { fontSize: 32 },
-  optionLabel: { fontSize: 16, fontWeight: '600', color: '#374151' },
-  optionLabelActive: { color: '#DB2777' },
-  optionUnit: { fontSize: 12, color: '#9CA3AF', marginTop: 2 },
-  nextBtn: {
-    backgroundColor: '#EC4899', padding: 16, borderRadius: 16, alignItems: 'center',
-    shadowColor: '#EC4899', shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
-  },
-  nextBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  amountRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12,
-  },
-  amountInput: {
-    borderWidth: 2, borderColor: '#EC4899', borderRadius: 16,
-    paddingHorizontal: 24, paddingVertical: 16, fontSize: 42, fontWeight: '800',
-    color: '#DB2777', textAlign: 'center', backgroundColor: '#fff', width: 180,
-  },
-  amountUnit: { fontSize: 20, fontWeight: '600', color: '#9CA3AF' },
-  chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center' },
-  chip: {
-    paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20,
-    backgroundColor: '#fff', borderWidth: 1.5, borderColor: '#FCE7F3',
-  },
-  chipActive: { borderColor: '#EC4899', backgroundColor: '#FFF5F9' },
-  chipText: { fontSize: 14, fontWeight: '500', color: '#9CA3AF' },
-  chipTextActive: { color: '#DB2777', fontWeight: '700' },
-  nutritionCard: {
-    backgroundColor: '#fff', borderRadius: 16, padding: 16,
-    borderWidth: 1, borderColor: '#FCE7F3',
-  },
-  nutritionTitle: { fontSize: 13, fontWeight: '600', color: '#9CA3AF', marginBottom: 12 },
-  nutritionRow: { flexDirection: 'row' },
-  nutritionItem: { flex: 1, alignItems: 'center' },
-  nutritionVal: { fontSize: 20, fontWeight: '800' },
-  nutritionUnit: { fontSize: 10, color: '#9CA3AF' },
-  nutritionLabel: { fontSize: 11, color: '#9CA3AF', marginTop: 2 },
-  logBtn: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: '#EC4899', padding: 16, borderRadius: 16,
-    shadowColor: '#EC4899', shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
-  },
-  logBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-});
+function createStyles(theme: Theme) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: theme.colors.background },
+    header: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+      paddingHorizontal: 16, paddingVertical: 12, backgroundColor: theme.colors.surface,
+      borderBottomWidth: 1, borderBottomColor: theme.colors.surfaceAlt,
+    },
+    backBtn: { width: 38, height: 38, justifyContent: 'center', alignItems: 'center' },
+    title: { fontSize: 17, fontWeight: '700', color: theme.colors.text },
+    dots: { flexDirection: 'row', justifyContent: 'center', gap: 8, paddingVertical: 16 },
+    dot: { width: 8, height: 8, borderRadius: 4, backgroundColor: theme.colors.surfaceAlt },
+    dotActive: { backgroundColor: theme.colors.primary, width: 20 },
+    content: { padding: 20, gap: 20, paddingBottom: 48 },
+    stepTitle: { fontSize: 24, fontWeight: '800', color: theme.colors.text },
+    stepSub: { fontSize: 14, color: theme.colors.textTertiary, marginTop: -12 },
+    optionList: { gap: 12 },
+    optionCard: {
+      flexDirection: 'row', alignItems: 'center', gap: 14, padding: 16,
+      backgroundColor: theme.colors.surface, borderRadius: 16, borderWidth: 2, borderColor: theme.colors.surfaceAlt,
+    },
+    optionCardActive: { borderColor: theme.colors.primary, backgroundColor: theme.colors.background },
+    optionEmoji: { fontSize: 32 },
+    optionLabel: { fontSize: 16, fontWeight: '600', color: theme.colors.text },
+    optionLabelActive: { color: theme.colors.secondary },
+    optionUnit: { fontSize: 12, color: theme.colors.textTertiary, marginTop: 2 },
+    nextBtn: {
+      backgroundColor: theme.colors.primary, padding: 16, borderRadius: 16, alignItems: 'center',
+      shadowColor: theme.colors.primary, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
+    },
+    nextBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+    amountRow: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12,
+    },
+    amountInput: {
+      borderWidth: 2, borderColor: theme.colors.primary, borderRadius: 16,
+      paddingHorizontal: 24, paddingVertical: 16, fontSize: 42, fontWeight: '800',
+      color: theme.colors.secondary, textAlign: 'center', backgroundColor: theme.colors.surface, width: 180,
+    },
+    amountUnit: { fontSize: 20, fontWeight: '600', color: theme.colors.textTertiary },
+    chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8, justifyContent: 'center' },
+    chip: {
+      paddingHorizontal: 16, paddingVertical: 8, borderRadius: 20,
+      backgroundColor: theme.colors.surface, borderWidth: 1.5, borderColor: theme.colors.surfaceAlt,
+    },
+    chipActive: { borderColor: theme.colors.primary, backgroundColor: theme.colors.background },
+    chipText: { fontSize: 14, fontWeight: '500', color: theme.colors.textTertiary },
+    chipTextActive: { color: theme.colors.secondary, fontWeight: '700' },
+    nutritionCard: {
+      backgroundColor: theme.colors.surface, borderRadius: 16, padding: 16,
+      borderWidth: 1, borderColor: theme.colors.surfaceAlt,
+    },
+    nutritionTitle: { fontSize: 13, fontWeight: '600', color: theme.colors.textTertiary, marginBottom: 12 },
+    nutritionRow: { flexDirection: 'row' },
+    nutritionItem: { flex: 1, alignItems: 'center' },
+    nutritionVal: { fontSize: 20, fontWeight: '800' },
+    nutritionUnit: { fontSize: 10, color: theme.colors.textTertiary },
+    nutritionLabel: { fontSize: 11, color: theme.colors.textTertiary, marginTop: 2 },
+    logBtn: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+      backgroundColor: theme.colors.primary, padding: 16, borderRadius: 16,
+      shadowColor: theme.colors.primary, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
+    },
+    logBtnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+  });
+}

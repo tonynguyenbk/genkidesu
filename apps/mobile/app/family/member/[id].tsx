@@ -4,7 +4,9 @@ import {
 } from 'react-native';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import type { Theme } from '@genki/ui';
 import { trpc } from '../../../lib/trpc';
+import { useAppTheme, useThemedStyles } from '../../../contexts/ThemeContext';
 
 const TYPE_COLORS: Record<string, string> = {
   adult: '#2ECC71', senior: '#F59E0B', teen: '#8B5CF6', baby: '#EC4899',
@@ -18,6 +20,7 @@ const MEAL_LABELS: Record<string, string> = {
 };
 
 function CalorieBar({ eaten, goal, color }: { eaten: number; goal: number; color: string }) {
+  const styles = useThemedStyles(createStyles);
   const pct = goal > 0 ? Math.min((eaten / goal) * 100, 100) : 0;
   const remaining = Math.max(goal - eaten, 0);
 
@@ -50,10 +53,12 @@ function MacroCard({
   protein: number; carbs: number; fat: number;
   proteinGoal: number; carbsGoal: number; fatGoal: number;
 }) {
+  const { theme } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
   const macros = [
-    { label: 'Protein', value: protein, goal: proteinGoal, color: '#3B82F6' },
-    { label: 'Carbs', value: carbs, goal: carbsGoal, color: '#F59E0B' },
-    { label: 'Fat', value: fat, goal: fatGoal, color: '#EF4444' },
+    { label: 'Protein', value: protein, goal: proteinGoal, color: theme.colors.info },
+    { label: 'Carbs', value: carbs, goal: carbsGoal, color: theme.colors.warning },
+    { label: 'Fat', value: fat, goal: fatGoal, color: theme.colors.error },
   ];
 
   return (
@@ -89,6 +94,7 @@ function MacroCard({
 }
 
 function WeekChart({ summaries }: { summaries: any[] }) {
+  const styles = useThemedStyles(createStyles);
   if (summaries.length === 0) return null;
 
   const days = ['CN', 'T2', 'T3', 'T4', 'T5', 'T6', 'T7'];
@@ -130,6 +136,8 @@ function WeekChart({ summaries }: { summaries: any[] }) {
 }
 
 function PrivacyCard({ profileId }: { profileId: string }) {
+  const { theme } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
   const utils = trpc.useUtils();
   const membership = trpc.family.getMembership.useQuery(
     { profileId },
@@ -168,8 +176,8 @@ function PrivacyCard({ profileId }: { profileId: string }) {
           value={showDetails}
           onValueChange={(v) => toggle('showDetailsToFamily', v)}
           disabled={updatePrivacy.isPending}
-          trackColor={{ false: '#E5E7EB', true: '#86EFAC' }}
-          thumbColor={showDetails ? '#2ECC71' : '#9CA3AF'}
+          trackColor={{ false: theme.colors.border, true: theme.colors.success }}
+          thumbColor={showDetails ? theme.colors.primary : theme.colors.textTertiary}
         />
       </View>
       <View style={[styles.privacyRow, !showDetails && { opacity: 0.4 }]}>
@@ -181,8 +189,8 @@ function PrivacyCard({ profileId }: { profileId: string }) {
           value={showMeals}
           onValueChange={(v) => toggle('showMealLogs', v)}
           disabled={updatePrivacy.isPending || !showDetails}
-          trackColor={{ false: '#E5E7EB', true: '#86EFAC' }}
-          thumbColor={showMeals ? '#2ECC71' : '#9CA3AF'}
+          trackColor={{ false: theme.colors.border, true: theme.colors.success }}
+          thumbColor={showMeals ? theme.colors.primary : theme.colors.textTertiary}
         />
       </View>
     </View>
@@ -190,6 +198,8 @@ function PrivacyCard({ profileId }: { profileId: string }) {
 }
 
 export default function MemberDetailScreen() {
+  const { theme } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
   const { id } = useLocalSearchParams<{ id: string }>();
   const router = useRouter();
 
@@ -234,7 +244,7 @@ export default function MemberDetailScreen() {
   if (profile.isLoading) {
     return (
       <SafeAreaView style={styles.container}>
-        <ActivityIndicator color="#2ECC71" style={{ marginTop: 80 }} />
+        <ActivityIndicator color={theme.colors.primary} style={{ marginTop: 80 }} />
       </SafeAreaView>
     );
   }
@@ -244,7 +254,7 @@ export default function MemberDetailScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.backBtn}>
-          <Ionicons name="arrow-back" size={22} color="#374151" />
+          <Ionicons name="arrow-back" size={22} color={theme.colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>{p?.name ?? 'Thành viên'}</Text>
         <View style={{ width: 40 }} />
@@ -310,96 +320,98 @@ export default function MemberDetailScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FBF9' },
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#fff',
-    borderBottomWidth: 1, borderBottomColor: '#F3F4F6',
-  },
-  backBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
-  headerTitle: { fontSize: 17, fontWeight: '700', color: '#111827' },
+function createStyles(theme: Theme) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: theme.colors.background },
+    header: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+      paddingHorizontal: 16, paddingVertical: 12, backgroundColor: theme.colors.surface,
+      borderBottomWidth: 1, borderBottomColor: theme.colors.divider,
+    },
+    backBtn: { width: 40, height: 40, justifyContent: 'center', alignItems: 'center' },
+    headerTitle: { fontSize: 17, fontWeight: '700', color: theme.colors.text },
 
-  hero: { alignItems: 'center', paddingVertical: 24, gap: 8 },
-  heroAvatar: {
-    width: 72, height: 72, borderRadius: 36,
-    justifyContent: 'center', alignItems: 'center',
-  },
-  heroAvatarText: { fontSize: 28, fontWeight: '800' },
-  heroName: { fontSize: 20, fontWeight: '800', color: '#111827' },
-  typeBadge: { paddingHorizontal: 14, paddingVertical: 4, borderRadius: 20 },
-  typeBadgeText: { fontSize: 12, fontWeight: '600' },
+    hero: { alignItems: 'center', paddingVertical: 24, gap: 8 },
+    heroAvatar: {
+      width: 72, height: 72, borderRadius: 36,
+      justifyContent: 'center', alignItems: 'center',
+    },
+    heroAvatarText: { fontSize: 28, fontWeight: '800' },
+    heroName: { fontSize: 20, fontWeight: '800', color: theme.colors.text },
+    typeBadge: { paddingHorizontal: 14, paddingVertical: 4, borderRadius: 20 },
+    typeBadgeText: { fontSize: 12, fontWeight: '600' },
 
-  calBarCard: {
-    backgroundColor: '#fff', borderRadius: 20, padding: 16,
-    shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 2,
-  },
-  calBarRow: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12,
-  },
-  calBarMain: { fontSize: 22, fontWeight: '800', color: '#111827' },
-  calBarSub: { fontSize: 11, color: '#9CA3AF', marginTop: 2 },
-  calRing: {
-    width: 64, height: 64, borderRadius: 32, borderWidth: 4,
-    justifyContent: 'center', alignItems: 'center',
-  },
-  calRingPct: { fontSize: 16, fontWeight: '800' },
-  calBarBg: { height: 8, backgroundColor: '#F3F4F6', borderRadius: 4, overflow: 'hidden', marginBottom: 6 },
-  calBarFill: { height: 8, borderRadius: 4 },
-  calBarGoal: { fontSize: 11, color: '#9CA3AF', textAlign: 'center' },
+    calBarCard: {
+      backgroundColor: theme.colors.surface, borderRadius: 20, padding: 16,
+      shadowColor: theme.colors.shadow, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2,
+    },
+    calBarRow: {
+      flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12,
+    },
+    calBarMain: { fontSize: 22, fontWeight: '800', color: theme.colors.text },
+    calBarSub: { fontSize: 11, color: theme.colors.textTertiary, marginTop: 2 },
+    calRing: {
+      width: 64, height: 64, borderRadius: 32, borderWidth: 4,
+      justifyContent: 'center', alignItems: 'center',
+    },
+    calRingPct: { fontSize: 16, fontWeight: '800' },
+    calBarBg: { height: 8, backgroundColor: theme.colors.divider, borderRadius: 4, overflow: 'hidden', marginBottom: 6 },
+    calBarFill: { height: 8, borderRadius: 4 },
+    calBarGoal: { fontSize: 11, color: theme.colors.textTertiary, textAlign: 'center' },
 
-  macroCard: {
-    backgroundColor: '#fff', borderRadius: 20, padding: 16,
-    shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 2,
-  },
-  macroGrid: { flexDirection: 'row', justifyContent: 'space-around', marginTop: 12 },
-  macroItem: { alignItems: 'center', gap: 4 },
-  macroCircleBg: {
-    width: 48, height: 64, backgroundColor: '#F3F4F6', borderRadius: 8,
-    overflow: 'hidden', justifyContent: 'flex-end',
-  },
-  macroCircleFill: { width: '100%', borderRadius: 8 },
-  macroItemVal: { fontSize: 14, fontWeight: '700' },
-  macroItemLabel: { fontSize: 11, color: '#374151', fontWeight: '600' },
-  macroItemGoal: { fontSize: 10, color: '#9CA3AF' },
+    macroCard: {
+      backgroundColor: theme.colors.surface, borderRadius: 20, padding: 16,
+      shadowColor: theme.colors.shadow, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2,
+    },
+    macroGrid: { flexDirection: 'row', justifyContent: 'space-around', marginTop: 12 },
+    macroItem: { alignItems: 'center', gap: 4 },
+    macroCircleBg: {
+      width: 48, height: 64, backgroundColor: theme.colors.divider, borderRadius: 8,
+      overflow: 'hidden', justifyContent: 'flex-end',
+    },
+    macroCircleFill: { width: '100%', borderRadius: 8 },
+    macroItemVal: { fontSize: 14, fontWeight: '700' },
+    macroItemLabel: { fontSize: 11, color: theme.colors.text, fontWeight: '600' },
+    macroItemGoal: { fontSize: 10, color: theme.colors.textTertiary },
 
-  mealsSection: {
-    marginHorizontal: 16, marginBottom: 12,
-    backgroundColor: '#fff', borderRadius: 20, padding: 16,
-    shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 2,
-  },
-  noMeals: { fontSize: 13, color: '#9CA3AF', textAlign: 'center', paddingVertical: 12 },
-  mealRow: {
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-    paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#F9FAFB',
-  },
-  mealType: { fontSize: 13, color: '#374151', fontWeight: '500' },
-  mealCal: { fontSize: 13, fontWeight: '700', color: '#111827' },
+    mealsSection: {
+      marginHorizontal: 16, marginBottom: 12,
+      backgroundColor: theme.colors.surface, borderRadius: 20, padding: 16,
+      shadowColor: theme.colors.shadow, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2,
+    },
+    noMeals: { fontSize: 13, color: theme.colors.textTertiary, textAlign: 'center', paddingVertical: 12 },
+    mealRow: {
+      flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+      paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: theme.colors.divider,
+    },
+    mealType: { fontSize: 13, color: theme.colors.text, fontWeight: '500' },
+    mealCal: { fontSize: 13, fontWeight: '700', color: theme.colors.text },
 
-  weekCard: {
-    backgroundColor: '#fff', borderRadius: 20, padding: 16,
-    shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 2,
-  },
-  chartRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 6, height: 100, marginTop: 12 },
-  chartBar: { flex: 1, alignItems: 'center', height: '100%' },
-  chartVal: { fontSize: 8, color: '#9CA3AF', marginBottom: 2 },
-  chartBarBg: {
-    flex: 1, width: '80%', backgroundColor: '#F3F4F6', borderRadius: 4,
-    overflow: 'hidden', justifyContent: 'flex-end',
-  },
-  chartBarFill: { width: '100%', backgroundColor: '#2ECC71', borderRadius: 4 },
-  chartDay: { fontSize: 10, color: '#9CA3AF', marginTop: 4 },
+    weekCard: {
+      backgroundColor: theme.colors.surface, borderRadius: 20, padding: 16,
+      shadowColor: theme.colors.shadow, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2,
+    },
+    chartRow: { flexDirection: 'row', alignItems: 'flex-end', gap: 6, height: 100, marginTop: 12 },
+    chartBar: { flex: 1, alignItems: 'center', height: '100%' },
+    chartVal: { fontSize: 8, color: theme.colors.textTertiary, marginBottom: 2 },
+    chartBarBg: {
+      flex: 1, width: '80%', backgroundColor: theme.colors.divider, borderRadius: 4,
+      overflow: 'hidden', justifyContent: 'flex-end',
+    },
+    chartBarFill: { width: '100%', backgroundColor: theme.colors.primary, borderRadius: 4 },
+    chartDay: { fontSize: 10, color: theme.colors.textTertiary, marginTop: 4 },
 
-  cardTitle: { fontSize: 14, fontWeight: '700', color: '#111827', marginBottom: 4 },
+    cardTitle: { fontSize: 14, fontWeight: '700', color: theme.colors.text, marginBottom: 4 },
 
-  privacyCard: {
-    backgroundColor: '#fff', borderRadius: 20, padding: 16,
-    shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 2,
-  },
-  privacyRow: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingVertical: 10, borderTopWidth: 1, borderTopColor: '#F9FAFB',
-  },
-  privacyLabel: { fontSize: 13, fontWeight: '600', color: '#111827' },
-  privacySub: { fontSize: 11, color: '#9CA3AF', marginTop: 2 },
-});
+    privacyCard: {
+      backgroundColor: theme.colors.surface, borderRadius: 20, padding: 16,
+      shadowColor: theme.colors.shadow, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2,
+    },
+    privacyRow: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+      paddingVertical: 10, borderTopWidth: 1, borderTopColor: theme.colors.divider,
+    },
+    privacyLabel: { fontSize: 13, fontWeight: '600', color: theme.colors.text },
+    privacySub: { fontSize: 11, color: theme.colors.textTertiary, marginTop: 2 },
+  });
+}

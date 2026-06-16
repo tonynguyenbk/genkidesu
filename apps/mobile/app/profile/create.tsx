@@ -5,7 +5,9 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import type { Theme } from '@genki/ui';
 import { trpc } from '../../lib/trpc';
+import { useAppTheme, useThemedStyles } from '../../contexts/ThemeContext';
 
 type ProfileType = 'adult' | 'baby' | 'teen' | 'senior';
 type Gender = 'male' | 'female' | 'other';
@@ -20,6 +22,8 @@ const ACTIVITY_LEVELS = [
 
 export default function CreateProfileScreen() {
   const router = useRouter();
+  const { theme } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
   const [step, setStep] = useState(1);
   const [name, setName] = useState('');
   const [gender, setGender] = useState<Gender>('male');
@@ -60,7 +64,7 @@ export default function CreateProfileScreen() {
         {/* Back button (steps 2+) */}
         {step > 1 && step < 4 && (
           <TouchableOpacity onPress={() => setStep(step - 1)} style={styles.back}>
-            <Ionicons name="arrow-back" size={22} color="#111827" />
+            <Ionicons name="arrow-back" size={22} color={theme.colors.text} />
           </TouchableOpacity>
         )}
 
@@ -223,7 +227,7 @@ export default function CreateProfileScreen() {
         {step === 4 && createProfile.data && (
           <View style={styles.section}>
             <View style={styles.successIcon}>
-              <Ionicons name="checkmark-circle" size={72} color="#2ECC71" />
+              <Ionicons name="checkmark-circle" size={72} color={theme.colors.primary} />
             </View>
             <Text style={styles.title}>Hồ sơ đã tạo!</Text>
 
@@ -241,9 +245,9 @@ export default function CreateProfileScreen() {
             {createProfile.data.nutritionTargets && (
               <View style={styles.macroRow}>
                 {[
-                  { label: 'Protein', key: 'protein_g', color: '#3B82F6' },
-                  { label: 'Carbs',   key: 'carbs_g',   color: '#F59E0B' },
-                  { label: 'Fat',     key: 'fat_g',     color: '#EF4444' },
+                  { label: 'Protein', key: 'protein_g', color: theme.colors.info },
+                  { label: 'Carbs',   key: 'carbs_g',   color: theme.colors.warning },
+                  { label: 'Fat',     key: 'fat_g',     color: theme.colors.error },
                 ].map((m) => (
                   <View key={m.label} style={[styles.macroCard, { borderTopColor: m.color }]}>
                     <Text style={[styles.macroVal, { color: m.color }]}>
@@ -260,10 +264,10 @@ export default function CreateProfileScreen() {
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.btn, { backgroundColor: '#F0FDF4', marginTop: 8 }]}
+              style={[styles.btn, { backgroundColor: theme.colors.surfaceAlt, marginTop: 8 }]}
               onPress={() => router.push('/family/create')}
             >
-              <Text style={[styles.btnText, { color: '#2ECC71' }]}>
+              <Text style={[styles.btnText, { color: theme.colors.primary }]}>
                 + Tạo gia đình ngay
               </Text>
             </TouchableOpacity>
@@ -276,79 +280,81 @@ export default function CreateProfileScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#fff' },
-  progressBar: { height: 3, backgroundColor: '#E5E7EB' },
-  progressFill: { height: 3, backgroundColor: '#2ECC71' },
-  back: { padding: 16 },
-  section: { paddingHorizontal: 24, paddingTop: 16, gap: 20 },
-  stepLabel: { fontSize: 12, fontWeight: '700', color: '#9CA3AF', letterSpacing: 1 },
-  title: { fontSize: 28, fontWeight: '800', color: '#111827', marginTop: -8 },
-  subtitle: { fontSize: 14, color: '#6B7280', marginTop: -12, lineHeight: 20 },
+function createStyles(theme: Theme) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: theme.colors.background },
+    progressBar: { height: 3, backgroundColor: theme.colors.border },
+    progressFill: { height: 3, backgroundColor: theme.colors.primary },
+    back: { padding: 16 },
+    section: { paddingHorizontal: 24, paddingTop: 16, gap: 20 },
+    stepLabel: { fontSize: 12, fontWeight: '700', color: theme.colors.textTertiary, letterSpacing: 1 },
+    title: { fontSize: 28, fontWeight: '800', color: theme.colors.text, marginTop: -8 },
+    subtitle: { fontSize: 14, color: theme.colors.textSecondary, marginTop: -12, lineHeight: 20 },
 
-  welcomeIcon: { alignItems: 'center', paddingTop: 24, paddingBottom: 8 },
-  features: { gap: 12 },
-  featureRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-  featureIcon: { fontSize: 24, width: 36 },
-  featureText: { fontSize: 15, color: '#374151', flex: 1 },
+    welcomeIcon: { alignItems: 'center', paddingTop: 24, paddingBottom: 8 },
+    features: { gap: 12 },
+    featureRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+    featureIcon: { fontSize: 24, width: 36 },
+    featureText: { fontSize: 15, color: theme.colors.text, flex: 1 },
 
-  field: { gap: 8 },
-  label: { fontSize: 14, fontWeight: '600', color: '#374151' },
-  input: {
-    borderWidth: 1.5, borderColor: '#E5E7EB', borderRadius: 12,
-    padding: 14, fontSize: 16, color: '#111827', backgroundColor: '#F9FAFB',
-  },
-  row: { flexDirection: 'row' },
-  chips: { flexDirection: 'row', gap: 10 },
-  chip: {
-    flex: 1, paddingVertical: 12, borderRadius: 10,
-    borderWidth: 1.5, borderColor: '#E5E7EB', alignItems: 'center',
-    backgroundColor: '#F9FAFB',
-  },
-  chipActive: { borderColor: '#2ECC71', backgroundColor: '#F0FDF4' },
-  chipText: { fontSize: 14, fontWeight: '600', color: '#6B7280' },
-  chipTextActive: { color: '#2ECC71' },
+    field: { gap: 8 },
+    label: { fontSize: 14, fontWeight: '600', color: theme.colors.text },
+    input: {
+      borderWidth: 1.5, borderColor: theme.colors.border, borderRadius: 12,
+      padding: 14, fontSize: 16, color: theme.colors.text, backgroundColor: theme.colors.divider,
+    },
+    row: { flexDirection: 'row' },
+    chips: { flexDirection: 'row', gap: 10 },
+    chip: {
+      flex: 1, paddingVertical: 12, borderRadius: 10,
+      borderWidth: 1.5, borderColor: theme.colors.border, alignItems: 'center',
+      backgroundColor: theme.colors.divider,
+    },
+    chipActive: { borderColor: theme.colors.primary, backgroundColor: theme.colors.surfaceAlt },
+    chipText: { fontSize: 14, fontWeight: '600', color: theme.colors.textSecondary },
+    chipTextActive: { color: theme.colors.primary },
 
-  activityRow: {
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    padding: 12, borderRadius: 12, borderWidth: 1.5, borderColor: '#F3F4F6',
-    backgroundColor: '#F9FAFB',
-  },
-  activityRowActive: { borderColor: '#2ECC71', backgroundColor: '#F0FDF4' },
-  radio: {
-    width: 20, height: 20, borderRadius: 10,
-    borderWidth: 2, borderColor: '#D1D5DB',
-    justifyContent: 'center', alignItems: 'center',
-  },
-  radioActive: { borderColor: '#2ECC71' },
-  radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#2ECC71' },
-  activityLabel: { fontSize: 14, fontWeight: '600', color: '#374151' },
-  activityLabelActive: { color: '#2ECC71' },
-  activitySub: { fontSize: 12, color: '#9CA3AF', marginTop: 1 },
+    activityRow: {
+      flexDirection: 'row', alignItems: 'center', gap: 12,
+      padding: 12, borderRadius: 12, borderWidth: 1.5, borderColor: theme.colors.divider,
+      backgroundColor: theme.colors.divider,
+    },
+    activityRowActive: { borderColor: theme.colors.primary, backgroundColor: theme.colors.surfaceAlt },
+    radio: {
+      width: 20, height: 20, borderRadius: 10,
+      borderWidth: 2, borderColor: theme.colors.textTertiary,
+      justifyContent: 'center', alignItems: 'center',
+    },
+    radioActive: { borderColor: theme.colors.primary },
+    radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: theme.colors.primary },
+    activityLabel: { fontSize: 14, fontWeight: '600', color: theme.colors.text },
+    activityLabelActive: { color: theme.colors.primary },
+    activitySub: { fontSize: 12, color: theme.colors.textTertiary, marginTop: 1 },
 
-  btn: {
-    backgroundColor: '#2ECC71', padding: 17, borderRadius: 14, alignItems: 'center',
-    shadowColor: '#2ECC71', shadowOpacity: 0.25, shadowRadius: 8, elevation: 3,
-  },
-  btnDisabled: { backgroundColor: '#D1D5DB', shadowOpacity: 0 },
-  btnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  skipBtn: { alignItems: 'center', paddingVertical: 4 },
-  skipText: { fontSize: 14, color: '#9CA3AF' },
+    btn: {
+      backgroundColor: theme.colors.primary, padding: 17, borderRadius: 14, alignItems: 'center',
+      shadowColor: theme.colors.primary, shadowOpacity: 0.25, shadowRadius: 8, elevation: 3,
+    },
+    btnDisabled: { backgroundColor: theme.colors.textTertiary, shadowOpacity: 0 },
+    btnText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+    skipBtn: { alignItems: 'center', paddingVertical: 4 },
+    skipText: { fontSize: 14, color: theme.colors.textTertiary },
 
-  successIcon: { alignItems: 'center', paddingTop: 32, paddingBottom: 8 },
-  tdeeCard: {
-    backgroundColor: '#F0FDF4', borderRadius: 20, padding: 24, alignItems: 'center',
-    borderWidth: 2, borderColor: '#BBF7D0',
-  },
-  tdeeTitle: { fontSize: 13, color: '#6B7280', marginBottom: 4 },
-  tdeeValue: { fontSize: 56, fontWeight: '900', color: '#2ECC71', lineHeight: 64 },
-  tdeeUnit: { fontSize: 16, color: '#2ECC71', fontWeight: '600' },
-  tdeeNote: { fontSize: 12, color: '#6B7280', textAlign: 'center', marginTop: 8, lineHeight: 18 },
-  macroRow: { flexDirection: 'row', gap: 10 },
-  macroCard: {
-    flex: 1, backgroundColor: '#F9FAFB', borderRadius: 12, padding: 14,
-    alignItems: 'center', borderTopWidth: 3,
-  },
-  macroVal: { fontSize: 22, fontWeight: '800' },
-  macroLabel: { fontSize: 11, color: '#9CA3AF', marginTop: 2 },
-});
+    successIcon: { alignItems: 'center', paddingTop: 32, paddingBottom: 8 },
+    tdeeCard: {
+      backgroundColor: theme.colors.successBg, borderRadius: 20, padding: 24, alignItems: 'center',
+      borderWidth: 2, borderColor: theme.colors.success,
+    },
+    tdeeTitle: { fontSize: 13, color: theme.colors.textSecondary, marginBottom: 4 },
+    tdeeValue: { fontSize: 56, fontWeight: '900', color: theme.colors.primary, lineHeight: 64 },
+    tdeeUnit: { fontSize: 16, color: theme.colors.primary, fontWeight: '600' },
+    tdeeNote: { fontSize: 12, color: theme.colors.textSecondary, textAlign: 'center', marginTop: 8, lineHeight: 18 },
+    macroRow: { flexDirection: 'row', gap: 10 },
+    macroCard: {
+      flex: 1, backgroundColor: theme.colors.divider, borderRadius: 12, padding: 14,
+      alignItems: 'center', borderTopWidth: 3,
+    },
+    macroVal: { fontSize: 22, fontWeight: '800' },
+    macroLabel: { fontSize: 11, color: theme.colors.textTertiary, marginTop: 2 },
+  });
+}

@@ -1,17 +1,21 @@
 import { View, Text, StyleSheet, SafeAreaView, ScrollView, Platform, ActivityIndicator } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import type { Theme } from '@genki/ui';
 import { trpc } from '../../lib/trpc';
 import { ProfileSwitcher } from '../../components/ProfileSwitcher';
 import { useActiveProfile } from '../../hooks/useActiveProfile';
+import { useAppTheme, useThemedStyles } from '../../contexts/ThemeContext';
 
 function WeekBar({ day, pct, active, cal }: { day: string; pct: number; active: boolean; cal: number }) {
+  const { theme } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
   return (
     <View style={styles.barCol}>
       <Text style={styles.barCalLabel}>{cal > 0 ? cal : ''}</Text>
       <View style={styles.barTrack}>
-        <View style={[styles.barFill, { height: `${Math.max(pct, 2)}%` as any, backgroundColor: active ? '#2ECC71' : '#D1FAE5' }]} />
+        <View style={[styles.barFill, { height: `${Math.max(pct, 2)}%` as any, backgroundColor: active ? theme.colors.primary : theme.colors.successBg }]} />
       </View>
-      <Text style={[styles.barDay, active && { color: '#2ECC71', fontWeight: '700' }]}>{day}</Text>
+      <Text style={[styles.barDay, active && { color: theme.colors.primary, fontWeight: '700' }]}>{day}</Text>
     </View>
   );
 }
@@ -19,6 +23,8 @@ function WeekBar({ day, pct, active, cal }: { day: string; pct: number; active: 
 function StatCard({ label, value, unit, icon, color, change }: {
   label: string; value: string; unit: string; icon: string; color: string; change?: string;
 }) {
+  const { theme } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
   return (
     <View style={[styles.statCard, { borderLeftColor: color, borderLeftWidth: 3 }]}>
       <Text style={styles.statIcon}>{icon}</Text>
@@ -29,7 +35,7 @@ function StatCard({ label, value, unit, icon, color, change }: {
           <Text style={styles.statUnit}>{unit}</Text>
         </View>
       </View>
-      {change && <Text style={[styles.statChange, { color: change.startsWith('↑') ? '#2ECC71' : '#EF4444' }]}>{change}</Text>}
+      {change && <Text style={[styles.statChange, { color: change.startsWith('↑') ? theme.colors.primary : theme.colors.error }]}>{change}</Text>}
     </View>
   );
 }
@@ -37,6 +43,8 @@ function StatCard({ label, value, unit, icon, color, change }: {
 const DAY_NAMES = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
 
 export default function StatsScreen() {
+  const { theme } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
   const { activeProfile: profile } = useActiveProfile();
 
   // Build last 7 days
@@ -98,7 +106,7 @@ export default function StatsScreen() {
             Trung bình: {avgCalories > 0 ? `${avgCalories.toLocaleString()} kcal/ngày` : 'Chưa có dữ liệu'}
           </Text>
           {isLoading ? (
-            <ActivityIndicator color="#2ECC71" style={{ marginVertical: 20 }} />
+            <ActivityIndicator color={theme.colors.primary} style={{ marginVertical: 20 }} />
           ) : (
             <View style={styles.barChart}>
               {last7Days.map((date, i) => {
@@ -124,34 +132,34 @@ export default function StatsScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Tuần này</Text>
           <StatCard
-            label="Calo hôm nay" icon="🔥" color="#F59E0B"
+            label="Calo hôm nay" icon="🔥" color={theme.colors.warning}
             value={Math.round(todayData?.totalCalories ?? 0).toLocaleString()} unit="kcal"
             change={caloriesGoal > 0 ? `${Math.round(((todayData?.totalCalories ?? 0) / caloriesGoal) * 100)}% mục tiêu` : undefined}
           />
           <StatCard
-            label="Protein hôm nay" icon="💪" color="#3B82F6"
+            label="Protein hôm nay" icon="💪" color={theme.colors.info}
             value={(todayData?.totalProteinG ?? 0).toFixed(0)} unit="g"
           />
           <StatCard
-            label="Tổng calo tuần" icon="📊" color="#8B5CF6"
+            label="Tổng calo tuần" icon="📊" color={theme.colors.secondary}
             value={Math.round(totalCalories).toLocaleString()} unit="kcal"
           />
           <StatCard
-            label="Số bữa hôm nay" icon="🍽️" color="#2ECC71"
+            label="Số bữa hôm nay" icon="🍽️" color={theme.colors.primary}
             value={String(todayData?.mealCount ?? 0)} unit="bữa"
           />
         </View>
 
         {/* Streak */}
         {streak > 0 && (
-          <View style={[styles.card, { backgroundColor: '#F0FDF4' }]}>
+          <View style={[styles.card, { backgroundColor: theme.colors.surfaceAlt }]}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
               <Text style={{ fontSize: 36 }}>🔥</Text>
               <View>
                 <Text style={styles.streakNum}>{streak} ngày</Text>
                 <Text style={styles.streakLabel}>chuỗi ghi nhận liên tiếp</Text>
               </View>
-              <Ionicons name="trophy" size={28} color="#F59E0B" style={{ marginLeft: 'auto' as any }} />
+              <Ionicons name="trophy" size={28} color={theme.colors.warning} style={{ marginLeft: 'auto' as any }} />
             </View>
           </View>
         )}
@@ -171,47 +179,49 @@ export default function StatsScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FBF9' },
-  header: {
-    paddingHorizontal: 20, paddingTop: Platform.OS === 'web' ? 20 : 8, paddingBottom: 8,
-    flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline',
-  },
-  title: { fontSize: 24, fontWeight: '800', color: '#111827' },
-  sub: { fontSize: 13, color: '#9CA3AF' },
-  card: {
-    backgroundColor: '#fff', borderRadius: 20, marginHorizontal: 16, marginBottom: 16,
-    padding: 20, shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 2,
-  },
-  cardTitle: { fontSize: 15, fontWeight: '700', color: '#111827' },
-  cardSub: { fontSize: 12, color: '#9CA3AF', marginTop: 2, marginBottom: 16 },
-  barChart: { flexDirection: 'row', gap: 4, height: 130, alignItems: 'flex-end' },
-  barCol: { flex: 1, alignItems: 'center', gap: 4 },
-  barCalLabel: { fontSize: 9, color: '#9CA3AF', textAlign: 'center' },
-  barTrack: {
-    width: '100%', flex: 1, backgroundColor: '#F3F4F6', borderRadius: 6,
-    justifyContent: 'flex-end', overflow: 'hidden',
-  },
-  barFill: { width: '100%', borderRadius: 6 },
-  barDay: { fontSize: 11, color: '#9CA3AF' },
-  section: { paddingHorizontal: 16, marginBottom: 16, gap: 10 },
-  sectionTitle: { fontSize: 16, fontWeight: '700', color: '#111827', marginBottom: 4 },
-  statCard: {
-    backgroundColor: '#fff', borderRadius: 14, padding: 14,
-    flexDirection: 'row', alignItems: 'center', gap: 12,
-    shadowColor: '#000', shadowOpacity: 0.03, shadowRadius: 4, elevation: 1,
-  },
-  statIcon: { fontSize: 24 },
-  statLabel: { fontSize: 12, color: '#9CA3AF' },
-  statValue: { fontSize: 22, fontWeight: '800' },
-  statUnit: { fontSize: 12, color: '#9CA3AF' },
-  statChange: { fontSize: 12, fontWeight: '500' },
-  streakNum: { fontSize: 22, fontWeight: '800', color: '#2ECC71' },
-  streakLabel: { fontSize: 13, color: '#6B7280', marginTop: 2 },
-  emptyCard: {
-    backgroundColor: '#fff', borderRadius: 20, marginHorizontal: 16,
-    padding: 32, alignItems: 'center', gap: 8,
-  },
-  emptyTitle: { fontSize: 16, fontWeight: '700', color: '#374151' },
-  emptySub: { fontSize: 13, color: '#9CA3AF', textAlign: 'center' },
-});
+function createStyles(theme: Theme) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: theme.colors.background },
+    header: {
+      paddingHorizontal: 20, paddingTop: Platform.OS === 'web' ? 20 : 8, paddingBottom: 8,
+      flexDirection: 'row', justifyContent: 'space-between', alignItems: 'baseline',
+    },
+    title: { fontSize: 24, fontWeight: '800', color: theme.colors.text },
+    sub: { fontSize: 13, color: theme.colors.textTertiary },
+    card: {
+      backgroundColor: theme.colors.surface, borderRadius: 20, marginHorizontal: 16, marginBottom: 16,
+      padding: 20, shadowColor: theme.colors.shadow, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2,
+    },
+    cardTitle: { fontSize: 15, fontWeight: '700', color: theme.colors.text },
+    cardSub: { fontSize: 12, color: theme.colors.textTertiary, marginTop: 2, marginBottom: 16 },
+    barChart: { flexDirection: 'row', gap: 4, height: 130, alignItems: 'flex-end' },
+    barCol: { flex: 1, alignItems: 'center', gap: 4 },
+    barCalLabel: { fontSize: 9, color: theme.colors.textTertiary, textAlign: 'center' },
+    barTrack: {
+      width: '100%', flex: 1, backgroundColor: theme.colors.divider, borderRadius: 6,
+      justifyContent: 'flex-end', overflow: 'hidden',
+    },
+    barFill: { width: '100%', borderRadius: 6 },
+    barDay: { fontSize: 11, color: theme.colors.textTertiary },
+    section: { paddingHorizontal: 16, marginBottom: 16, gap: 10 },
+    sectionTitle: { fontSize: 16, fontWeight: '700', color: theme.colors.text, marginBottom: 4 },
+    statCard: {
+      backgroundColor: theme.colors.surface, borderRadius: 14, padding: 14,
+      flexDirection: 'row', alignItems: 'center', gap: 12,
+      shadowColor: theme.colors.shadow, shadowOpacity: 0.03, shadowRadius: 4, elevation: 1,
+    },
+    statIcon: { fontSize: 24 },
+    statLabel: { fontSize: 12, color: theme.colors.textTertiary },
+    statValue: { fontSize: 22, fontWeight: '800' },
+    statUnit: { fontSize: 12, color: theme.colors.textTertiary },
+    statChange: { fontSize: 12, fontWeight: '500' },
+    streakNum: { fontSize: 22, fontWeight: '800', color: theme.colors.primary },
+    streakLabel: { fontSize: 13, color: theme.colors.textSecondary, marginTop: 2 },
+    emptyCard: {
+      backgroundColor: theme.colors.surface, borderRadius: 20, marginHorizontal: 16,
+      padding: 32, alignItems: 'center', gap: 8,
+    },
+    emptyTitle: { fontSize: 16, fontWeight: '700', color: theme.colors.text },
+    emptySub: { fontSize: 13, color: theme.colors.textTertiary, textAlign: 'center' },
+  });
+}

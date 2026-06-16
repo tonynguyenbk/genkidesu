@@ -1,27 +1,44 @@
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Platform, ActivityIndicator } from 'react-native';
+import { useState } from 'react';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Platform, ActivityIndicator, Modal, Pressable } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import type { Theme } from '@genki/ui';
 import { useAuth } from '../../hooks/useAuth';
 import { trpc } from '../../lib/trpc';
 import { useNotifications } from '../../hooks/useNotifications';
 import { useActiveProfile } from '../../hooks/useActiveProfile';
+import { useAppTheme, useThemedStyles, type ThemePreference } from '../../contexts/ThemeContext';
 
 const TYPE_COLORS: Record<string, string> = {
   adult: '#2ECC71', senior: '#F59E0B', teen: '#8B5CF6', baby: '#EC4899',
 };
 
+const THEME_OPTIONS: { key: ThemePreference; label: string; icon: keyof typeof Ionicons.glyphMap }[] = [
+  { key: 'system', label: 'Theo hệ thống', icon: 'phone-portrait-outline' },
+  { key: 'light', label: 'Sáng', icon: 'sunny-outline' },
+  { key: 'dark', label: 'Tối', icon: 'moon-outline' },
+];
+
+const THEME_LABELS: Record<ThemePreference, string> = {
+  system: 'Hệ thống',
+  light: 'Sáng',
+  dark: 'Tối',
+};
+
 function MenuItem({ icon, label, value, onPress, danger }: {
   icon: string; label: string; value?: string; onPress?: () => void; danger?: boolean;
 }) {
+  const { theme } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
   return (
     <TouchableOpacity style={styles.menuItem} onPress={onPress}>
       <View style={[styles.menuIcon, danger && styles.menuIconDanger]}>
-        <Ionicons name={icon as any} size={18} color={danger ? '#EF4444' : '#2ECC71'} />
+        <Ionicons name={icon as any} size={18} color={danger ? theme.colors.error : theme.colors.primary} />
       </View>
-      <Text style={[styles.menuLabel, danger && { color: '#EF4444' }]}>{label}</Text>
+      <Text style={[styles.menuLabel, danger && { color: theme.colors.error }]}>{label}</Text>
       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
         {value && <Text style={styles.menuValue}>{value}</Text>}
-        {!danger && <Ionicons name="chevron-forward" size={16} color="#D1D5DB" />}
+        {!danger && <Ionicons name="chevron-forward" size={16} color={theme.colors.textTertiary} />}
       </View>
     </TouchableOpacity>
   );
@@ -36,6 +53,9 @@ function calcBMI(weightKg: number | null, heightCm: number | null): string {
 export default function ProfileScreen() {
   const router = useRouter();
   const { logout } = useAuth();
+  const { theme, preference, setPreference } = useAppTheme();
+  const styles = useThemedStyles(createStyles);
+  const [themeModalVisible, setThemeModalVisible] = useState(false);
 
   const me = trpc.auth.me.useQuery(undefined, { retry: false });
   const { activeProfile: profile, isLoading: profileLoading } = useActiveProfile();
@@ -62,7 +82,7 @@ export default function ProfileScreen() {
         {/* Profile hero */}
         <View style={styles.hero}>
           {profileLoading ? (
-            <ActivityIndicator color="#2ECC71" size="large" />
+            <ActivityIndicator color={theme.colors.primary} size="large" />
           ) : (
             <>
               <View style={[styles.avatarBig, { backgroundColor: color }]}>
@@ -144,6 +164,12 @@ export default function ProfileScreen() {
           <Text style={styles.sectionTitle}>Cài đặt</Text>
           <View style={styles.menuCard}>
             <MenuItem
+              icon="color-palette-outline"
+              label="Giao diện"
+              value={THEME_LABELS[preference]}
+              onPress={() => setThemeModalVisible(true)}
+            />
+            <MenuItem
               icon="notifications-outline"
               label="Thông báo"
               value={permission === 'granted' ? 'Bật' : 'Tắt'}
@@ -184,65 +210,113 @@ export default function ProfileScreen() {
           <MenuItem icon="log-out-outline" label="Đăng xuất" danger onPress={logout} />
         </View>
       </ScrollView>
+
+      <Modal
+        visible={themeModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setThemeModalVisible(false)}
+      >
+        <Pressable style={styles.modalOverlay} onPress={() => setThemeModalVisible(false)}>
+          <Pressable style={styles.modalSheet} onPress={() => {}}>
+            <Text style={styles.modalTitle}>Giao diện</Text>
+            {THEME_OPTIONS.map((opt) => {
+              const selected = preference === opt.key;
+              return (
+                <TouchableOpacity
+                  key={opt.key}
+                  style={[styles.modalOption, selected && { backgroundColor: theme.colors.surfaceAlt }]}
+                  onPress={() => {
+                    setPreference(opt.key);
+                    setThemeModalVisible(false);
+                  }}
+                >
+                  <View style={styles.modalOptionLeft}>
+                    <Ionicons name={opt.icon} size={20} color={selected ? theme.colors.primary : theme.colors.textSecondary} />
+                    <Text style={[styles.modalOptionLabel, selected && { color: theme.colors.primary }]}>{opt.label}</Text>
+                  </View>
+                  {selected && <Ionicons name="checkmark" size={20} color={theme.colors.primary} />}
+                </TouchableOpacity>
+              );
+            })}
+          </Pressable>
+        </Pressable>
+      </Modal>
     </SafeAreaView>
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FBF9' },
-  hero: {
-    alignItems: 'center', paddingTop: Platform.OS === 'web' ? 32 : 16,
-    paddingBottom: 24, paddingHorizontal: 20, minHeight: 160,
-  },
-  avatarBig: {
-    width: 84, height: 84, borderRadius: 42,
-    justifyContent: 'center', alignItems: 'center',
-    marginBottom: 12, shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 12, elevation: 6,
-  },
-  avatarText: { fontSize: 32, fontWeight: '800', color: '#fff' },
-  name: { fontSize: 20, fontWeight: '800', color: '#111827' },
-  email: { fontSize: 13, color: '#9CA3AF', marginTop: 2 },
-  badgeRow: { flexDirection: 'row', gap: 8, marginTop: 12, flexWrap: 'wrap', justifyContent: 'center' },
-  badge: {
-    paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20,
-    backgroundColor: '#F0FDF4',
-  },
-  badgeText: { fontSize: 12, fontWeight: '600', color: '#2ECC71' },
-  statsRow: {
-    flexDirection: 'row', backgroundColor: '#fff', marginHorizontal: 16, marginBottom: 20,
-    borderRadius: 16, padding: 16,
-    shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 2,
-  },
-  statItem: { flex: 1, alignItems: 'center' },
-  statValue: { fontSize: 18, fontWeight: '800', color: '#111827' },
-  statUnit: { fontSize: 11, color: '#9CA3AF', fontWeight: '400' },
-  statLabel: { fontSize: 12, color: '#9CA3AF', marginTop: 2 },
-  section: { paddingHorizontal: 16, marginBottom: 16 },
-  sectionTitle: { fontSize: 13, fontWeight: '600', color: '#9CA3AF', marginBottom: 8, paddingLeft: 4 },
-  menuCard: {
-    backgroundColor: '#fff', borderRadius: 16, overflow: 'hidden',
-    shadowColor: '#000', shadowOpacity: 0.03, shadowRadius: 6, elevation: 1,
-  },
-  menuItem: {
-    flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12,
-    borderBottomWidth: 1, borderBottomColor: '#F9FAFB',
-  },
-  menuIcon: {
-    width: 34, height: 34, borderRadius: 10,
-    backgroundColor: '#F0FDF4', justifyContent: 'center', alignItems: 'center',
-  },
-  menuIconDanger: { backgroundColor: '#FEF2F2' },
-  menuLabel: { flex: 1, fontSize: 14, fontWeight: '500', color: '#111827' },
-  menuValue: { fontSize: 13, color: '#9CA3AF' },
-  upgradeBanner: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    backgroundColor: '#F0FDF4', borderRadius: 16, marginHorizontal: 16, marginBottom: 16,
-    padding: 16, borderWidth: 1.5, borderColor: '#2ECC71',
-  },
-  upgradeTitle: { fontSize: 15, fontWeight: '700', color: '#065F46' },
-  upgradeSub: { fontSize: 12, color: '#059669', marginTop: 2 },
-  upgradeBtn: {
-    backgroundColor: '#2ECC71', paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20,
-  },
-  upgradeBtnText: { fontSize: 13, fontWeight: '700', color: '#fff' },
-});
+function createStyles(theme: Theme) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: theme.colors.background },
+    hero: {
+      alignItems: 'center', paddingTop: Platform.OS === 'web' ? 32 : 16,
+      paddingBottom: 24, paddingHorizontal: 20, minHeight: 160,
+    },
+    avatarBig: {
+      width: 84, height: 84, borderRadius: 42,
+      justifyContent: 'center', alignItems: 'center',
+      marginBottom: 12, shadowColor: theme.colors.shadow, shadowOpacity: 0.15, shadowRadius: 12, elevation: 6,
+    },
+    avatarText: { fontSize: 32, fontWeight: '800', color: '#fff' },
+    name: { fontSize: 20, fontWeight: '800', color: theme.colors.text },
+    email: { fontSize: 13, color: theme.colors.textTertiary, marginTop: 2 },
+    badgeRow: { flexDirection: 'row', gap: 8, marginTop: 12, flexWrap: 'wrap', justifyContent: 'center' },
+    badge: {
+      paddingHorizontal: 12, paddingVertical: 4, borderRadius: 20,
+      backgroundColor: theme.colors.surfaceAlt,
+    },
+    badgeText: { fontSize: 12, fontWeight: '600', color: theme.colors.primary },
+    statsRow: {
+      flexDirection: 'row', backgroundColor: theme.colors.surface, marginHorizontal: 16, marginBottom: 20,
+      borderRadius: 16, padding: 16,
+      shadowColor: theme.colors.shadow, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2,
+    },
+    statItem: { flex: 1, alignItems: 'center' },
+    statValue: { fontSize: 18, fontWeight: '800', color: theme.colors.text },
+    statUnit: { fontSize: 11, color: theme.colors.textTertiary, fontWeight: '400' },
+    statLabel: { fontSize: 12, color: theme.colors.textTertiary, marginTop: 2 },
+    section: { paddingHorizontal: 16, marginBottom: 16 },
+    sectionTitle: { fontSize: 13, fontWeight: '600', color: theme.colors.textTertiary, marginBottom: 8, paddingLeft: 4 },
+    menuCard: {
+      backgroundColor: theme.colors.surface, borderRadius: 16, overflow: 'hidden',
+      shadowColor: theme.colors.shadow, shadowOpacity: 0.03, shadowRadius: 6, elevation: 1,
+    },
+    menuItem: {
+      flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12,
+      borderBottomWidth: 1, borderBottomColor: theme.colors.divider,
+    },
+    menuIcon: {
+      width: 34, height: 34, borderRadius: 10,
+      backgroundColor: theme.colors.surfaceAlt, justifyContent: 'center', alignItems: 'center',
+    },
+    menuIconDanger: { backgroundColor: theme.colors.errorBg },
+    menuLabel: { flex: 1, fontSize: 14, fontWeight: '500', color: theme.colors.text },
+    menuValue: { fontSize: 13, color: theme.colors.textTertiary },
+    upgradeBanner: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+      backgroundColor: theme.colors.surfaceAlt, borderRadius: 16, marginHorizontal: 16, marginBottom: 16,
+      padding: 16, borderWidth: 1.5, borderColor: theme.colors.primary,
+    },
+    upgradeTitle: { fontSize: 15, fontWeight: '700', color: theme.colors.text },
+    upgradeSub: { fontSize: 12, color: theme.colors.textSecondary, marginTop: 2 },
+    upgradeBtn: {
+      backgroundColor: theme.colors.primary, paddingHorizontal: 14, paddingVertical: 8, borderRadius: 20,
+    },
+    upgradeBtnText: { fontSize: 13, fontWeight: '700', color: '#fff' },
+    modalOverlay: {
+      flex: 1, backgroundColor: theme.colors.overlay, justifyContent: 'flex-end',
+    },
+    modalSheet: {
+      backgroundColor: theme.colors.surface, borderTopLeftRadius: 20, borderTopRightRadius: 20,
+      padding: 20, paddingBottom: Platform.OS === 'web' ? 20 : 36,
+    },
+    modalTitle: { fontSize: 16, fontWeight: '700', color: theme.colors.text, marginBottom: 12, textAlign: 'center' },
+    modalOption: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+      paddingVertical: 14, paddingHorizontal: 8, borderRadius: 12,
+    },
+    modalOptionLeft: { flexDirection: 'row', alignItems: 'center', gap: 12 },
+    modalOptionLabel: { fontSize: 15, fontWeight: '500', color: theme.colors.text },
+  });
+}

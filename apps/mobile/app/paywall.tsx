@@ -5,7 +5,9 @@ import {
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+import type { Theme } from '@genki/ui';
 import { trpc } from '../lib/trpc';
+import { useAppTheme, useThemedStyles } from '../contexts/ThemeContext';
 
 type PlanId = 'free' | 'pro' | 'family';
 
@@ -22,6 +24,7 @@ const PLAN_BG: Record<PlanId, string> = {
 };
 
 function CheckItem({ text, color }: { text: string; color: string }) {
+  const styles = useThemedStyles(createStyles);
   return (
     <View style={styles.checkRow}>
       <Ionicons name="checkmark-circle" size={16} color={color} />
@@ -41,15 +44,17 @@ function PlanCard({
   current: boolean;
   onSelect: () => void;
 }) {
+  const styles = useThemedStyles(createStyles);
+  const { theme } = useAppTheme();
   if (!plan) return null;
-  const color = PLAN_COLORS[plan.id as PlanId] ?? '#6B7280';
-  const bg = PLAN_BG[plan.id as PlanId] ?? '#F9FAFB';
+  const color = PLAN_COLORS[plan.id as PlanId] ?? theme.colors.textSecondary;
+  const bg = PLAN_BG[plan.id as PlanId] ?? theme.colors.divider;
 
   return (
     <TouchableOpacity
       style={[
         styles.planCard,
-        { borderColor: selected ? color : '#E5E7EB', backgroundColor: selected ? bg : '#fff' },
+        { borderColor: selected ? color : theme.colors.border, backgroundColor: selected ? bg : theme.colors.surface },
         selected && styles.planCardSelected,
       ]}
       onPress={onSelect}
@@ -76,7 +81,7 @@ function PlanCard({
 
       <View style={styles.featureList}>
         {plan.features.map((f: string) => (
-          <CheckItem key={f} text={f} color={selected ? color : '#9CA3AF'} />
+          <CheckItem key={f} text={f} color={selected ? color : theme.colors.textTertiary} />
         ))}
       </View>
 
@@ -96,6 +101,8 @@ function usePlans() {
 
 export default function PaywallScreen() {
   const router = useRouter();
+  const styles = useThemedStyles(createStyles);
+  const { theme } = useAppTheme();
   const [selectedPlan, setSelectedPlan] = useState<PlanId>('pro');
 
   const { plans, isLoading: plansLoading } = usePlans();
@@ -124,14 +131,14 @@ export default function PaywallScreen() {
       {/* Header */}
       <View style={styles.header}>
         <TouchableOpacity onPress={() => router.back()} style={styles.closeBtn}>
-          <Ionicons name="close" size={22} color="#374151" />
+          <Ionicons name="close" size={22} color={theme.colors.text} />
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Nâng cấp Genki</Text>
         <View style={{ width: 38 }} />
       </View>
 
       {plansLoading && (
-        <ActivityIndicator color="#2ECC71" style={{ marginTop: 80 }} />
+        <ActivityIndicator color={theme.colors.primary} style={{ marginTop: 80 }} />
       )}
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
@@ -162,7 +169,7 @@ export default function PaywallScreen() {
             onPress={() => setSelectedPlan('free')}
           >
             <Text style={styles.freePlanText}>Tiếp tục dùng miễn phí (3 ảnh/ngày)</Text>
-            {selectedPlan === 'free' && <Ionicons name="checkmark" size={16} color="#6B7280" />}
+            {selectedPlan === 'free' && <Ionicons name="checkmark" size={16} color={theme.colors.textSecondary} />}
           </TouchableOpacity>
         </View>
 
@@ -180,16 +187,16 @@ export default function PaywallScreen() {
             <View key={row.feature} style={[styles.compareRow, i % 2 === 0 && styles.compareRowEven]}>
               <Text style={styles.compareFeature}>{row.feature}</Text>
               <Text style={styles.compareFree}>{row.free}</Text>
-              <Text style={[styles.comparePro, { color: '#2ECC71' }]}>{row.pro}</Text>
-              <Text style={[styles.compareFamily, { color: '#8B5CF6' }]}>{row.family}</Text>
+              <Text style={[styles.comparePro, { color: PLAN_COLORS.pro }]}>{row.pro}</Text>
+              <Text style={[styles.compareFamily, { color: PLAN_COLORS.family }]}>{row.family}</Text>
             </View>
           ))}
           {/* Header */}
           <View style={[styles.compareRow, styles.compareHeader]}>
             <Text style={styles.compareFeature} />
-            <Text style={[styles.compareFree, { color: '#6B7280', fontWeight: '700' }]}>Free</Text>
-            <Text style={[styles.comparePro, { color: '#2ECC71', fontWeight: '700' }]}>Pro</Text>
-            <Text style={[styles.compareFamily, { color: '#8B5CF6', fontWeight: '700' }]}>Gia đình</Text>
+            <Text style={[styles.compareFree, { color: PLAN_COLORS.free, fontWeight: '700' }]}>Free</Text>
+            <Text style={[styles.comparePro, { color: PLAN_COLORS.pro, fontWeight: '700' }]}>Pro</Text>
+            <Text style={[styles.compareFamily, { color: PLAN_COLORS.family, fontWeight: '700' }]}>Gia đình</Text>
           </View>
         </View>
 
@@ -242,101 +249,103 @@ export default function PaywallScreen() {
   );
 }
 
-const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8FBF9' },
-  header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingVertical: 12, backgroundColor: '#fff',
-    borderBottomWidth: 1, borderBottomColor: '#F3F4F6',
-  },
-  closeBtn: { width: 38, height: 38, justifyContent: 'center', alignItems: 'center' },
-  headerTitle: { fontSize: 17, fontWeight: '700', color: '#111827' },
-  content: { paddingHorizontal: 16, paddingTop: 8 },
+function createStyles(theme: Theme) {
+  return StyleSheet.create({
+    container: { flex: 1, backgroundColor: theme.colors.background },
+    header: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
+      paddingHorizontal: 16, paddingVertical: 12, backgroundColor: theme.colors.surface,
+      borderBottomWidth: 1, borderBottomColor: theme.colors.divider,
+    },
+    closeBtn: { width: 38, height: 38, justifyContent: 'center', alignItems: 'center' },
+    headerTitle: { fontSize: 17, fontWeight: '700', color: theme.colors.text },
+    content: { paddingHorizontal: 16, paddingTop: 8 },
 
-  hero: { alignItems: 'center', paddingVertical: 24, gap: 8 },
-  heroEmoji: { fontSize: 48 },
-  heroTitle: { fontSize: 22, fontWeight: '800', color: '#111827', textAlign: 'center' },
-  heroSub: { fontSize: 14, color: '#9CA3AF', textAlign: 'center', lineHeight: 22 },
+    hero: { alignItems: 'center', paddingVertical: 24, gap: 8 },
+    heroEmoji: { fontSize: 48 },
+    heroTitle: { fontSize: 22, fontWeight: '800', color: theme.colors.text, textAlign: 'center' },
+    heroSub: { fontSize: 14, color: theme.colors.textTertiary, textAlign: 'center', lineHeight: 22 },
 
-  plansSection: { gap: 12, marginBottom: 20 },
-  planCard: {
-    borderRadius: 18, borderWidth: 2, padding: 16,
-    position: 'relative', overflow: 'hidden',
-  },
-  planCardSelected: {
-    shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 12, elevation: 4,
-  },
-  badge: {
-    position: 'absolute', top: 12, right: 12,
-    paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20,
-  },
-  badgeText: { fontSize: 11, fontWeight: '700', color: '#fff' },
-  planHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 },
-  planName: { fontSize: 18, fontWeight: '800' },
-  priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 2, marginTop: 2 },
-  planPrice: { fontSize: 22, fontWeight: '800' },
-  planPeriod: { fontSize: 12, color: '#9CA3AF' },
-  radio: {
-    width: 22, height: 22, borderRadius: 11, borderWidth: 2,
-    justifyContent: 'center', alignItems: 'center',
-  },
-  radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#fff' },
-  featureList: { gap: 8 },
-  checkRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
-  checkText: { fontSize: 13, color: '#374151', flex: 1 },
-  currentBadge: {
-    marginTop: 12, paddingVertical: 6, borderRadius: 8, alignItems: 'center',
-  },
-  currentBadgeText: { fontSize: 12, fontWeight: '600' },
-  freePlan: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
-    backgroundColor: '#F9FAFB', borderRadius: 14, padding: 14,
-    borderWidth: 1.5, borderColor: '#E5E7EB',
-  },
-  freePlanSelected: { borderColor: '#9CA3AF' },
-  freePlanText: { fontSize: 13, color: '#9CA3AF' },
+    plansSection: { gap: 12, marginBottom: 20 },
+    planCard: {
+      borderRadius: 18, borderWidth: 2, padding: 16,
+      position: 'relative', overflow: 'hidden',
+    },
+    planCardSelected: {
+      shadowColor: theme.colors.shadow, shadowOpacity: 0.08, shadowRadius: 12, elevation: 4,
+    },
+    badge: {
+      position: 'absolute', top: 12, right: 12,
+      paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20,
+    },
+    badgeText: { fontSize: 11, fontWeight: '700', color: '#fff' },
+    planHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 14 },
+    planName: { fontSize: 18, fontWeight: '800' },
+    priceRow: { flexDirection: 'row', alignItems: 'baseline', gap: 2, marginTop: 2 },
+    planPrice: { fontSize: 22, fontWeight: '800' },
+    planPeriod: { fontSize: 12, color: theme.colors.textTertiary },
+    radio: {
+      width: 22, height: 22, borderRadius: 11, borderWidth: 2,
+      justifyContent: 'center', alignItems: 'center',
+    },
+    radioDot: { width: 10, height: 10, borderRadius: 5, backgroundColor: '#fff' },
+    featureList: { gap: 8 },
+    checkRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    checkText: { fontSize: 13, color: theme.colors.text, flex: 1 },
+    currentBadge: {
+      marginTop: 12, paddingVertical: 6, borderRadius: 8, alignItems: 'center',
+    },
+    currentBadgeText: { fontSize: 12, fontWeight: '600' },
+    freePlan: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 8,
+      backgroundColor: theme.colors.divider, borderRadius: 14, padding: 14,
+      borderWidth: 1.5, borderColor: theme.colors.border,
+    },
+    freePlanSelected: { borderColor: theme.colors.textTertiary },
+    freePlanText: { fontSize: 13, color: theme.colors.textTertiary },
 
-  compareCard: {
-    backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 16,
-    shadowColor: '#000', shadowOpacity: 0.04, shadowRadius: 8, elevation: 2,
-  },
-  compareTitle: { fontSize: 15, fontWeight: '700', color: '#111827', marginBottom: 12 },
-  compareHeader: { borderTopWidth: 1, borderTopColor: '#F3F4F6', paddingTop: 10, marginTop: 4 },
-  compareRow: {
-    flexDirection: 'row', alignItems: 'center', paddingVertical: 8,
-  },
-  compareRowEven: { backgroundColor: '#F9FAFB', borderRadius: 6 },
-  compareFeature: { flex: 2, fontSize: 12, color: '#374151', paddingLeft: 4 },
-  compareFree: { flex: 1, fontSize: 11, color: '#9CA3AF', textAlign: 'center' },
-  comparePro: { flex: 1, fontSize: 11, textAlign: 'center', fontWeight: '500' },
-  compareFamily: { flex: 1, fontSize: 11, textAlign: 'center', fontWeight: '500' },
+    compareCard: {
+      backgroundColor: theme.colors.surface, borderRadius: 16, padding: 16, marginBottom: 16,
+      shadowColor: theme.colors.shadow, shadowOpacity: 0.04, shadowRadius: 8, elevation: 2,
+    },
+    compareTitle: { fontSize: 15, fontWeight: '700', color: theme.colors.text, marginBottom: 12 },
+    compareHeader: { borderTopWidth: 1, borderTopColor: theme.colors.divider, paddingTop: 10, marginTop: 4 },
+    compareRow: {
+      flexDirection: 'row', alignItems: 'center', paddingVertical: 8,
+    },
+    compareRowEven: { backgroundColor: theme.colors.divider, borderRadius: 6 },
+    compareFeature: { flex: 2, fontSize: 12, color: theme.colors.text, paddingLeft: 4 },
+    compareFree: { flex: 1, fontSize: 11, color: theme.colors.textTertiary, textAlign: 'center' },
+    comparePro: { flex: 1, fontSize: 11, textAlign: 'center', fontWeight: '500' },
+    compareFamily: { flex: 1, fontSize: 11, textAlign: 'center', fontWeight: '500' },
 
-  trustRow: {
-    flexDirection: 'row', justifyContent: 'space-around',
-    backgroundColor: '#fff', borderRadius: 16, padding: 16, marginBottom: 16,
-  },
-  trustItem: { alignItems: 'center', gap: 4 },
-  trustText: { fontSize: 11, color: '#6B7280', textAlign: 'center', maxWidth: 80 },
+    trustRow: {
+      flexDirection: 'row', justifyContent: 'space-around',
+      backgroundColor: theme.colors.surface, borderRadius: 16, padding: 16, marginBottom: 16,
+    },
+    trustItem: { alignItems: 'center', gap: 4 },
+    trustText: { fontSize: 11, color: theme.colors.textSecondary, textAlign: 'center', maxWidth: 80 },
 
-  ctaBar: {
-    position: Platform.OS === 'web' ? 'relative' : 'absolute',
-    bottom: 0, left: 0, right: 0,
-    backgroundColor: '#fff', paddingHorizontal: 16, paddingTop: 12,
-    paddingBottom: Platform.OS === 'ios' ? 32 : 16,
-    borderTopWidth: 1, borderTopColor: '#F3F4F6',
-    shadowColor: '#000', shadowOpacity: 0.08, shadowRadius: 8, elevation: 8,
-    gap: 8,
-  },
-  cta: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
-    gap: 8, padding: 16, borderRadius: 16,
-    shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
-  },
-  ctaText: { color: '#fff', fontSize: 16, fontWeight: '700' },
-  ctaSecondary: {
-    padding: 16, borderRadius: 16, alignItems: 'center',
-    borderWidth: 1.5, borderColor: '#E5E7EB', backgroundColor: '#F9FAFB',
-  },
-  ctaSecondaryText: { fontSize: 15, color: '#6B7280', fontWeight: '600' },
-  ctaNote: { fontSize: 11, color: '#9CA3AF', textAlign: 'center' },
-});
+    ctaBar: {
+      position: Platform.OS === 'web' ? 'relative' : 'absolute',
+      bottom: 0, left: 0, right: 0,
+      backgroundColor: theme.colors.surface, paddingHorizontal: 16, paddingTop: 12,
+      paddingBottom: Platform.OS === 'ios' ? 32 : 16,
+      borderTopWidth: 1, borderTopColor: theme.colors.divider,
+      shadowColor: theme.colors.shadow, shadowOpacity: 0.08, shadowRadius: 8, elevation: 8,
+      gap: 8,
+    },
+    cta: {
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+      gap: 8, padding: 16, borderRadius: 16,
+      shadowOpacity: 0.3, shadowRadius: 8, elevation: 4,
+    },
+    ctaText: { color: '#fff', fontSize: 16, fontWeight: '700' },
+    ctaSecondary: {
+      padding: 16, borderRadius: 16, alignItems: 'center',
+      borderWidth: 1.5, borderColor: theme.colors.border, backgroundColor: theme.colors.divider,
+    },
+    ctaSecondaryText: { fontSize: 15, color: theme.colors.textSecondary, fontWeight: '600' },
+    ctaNote: { fontSize: 11, color: theme.colors.textTertiary, textAlign: 'center' },
+  });
+}
