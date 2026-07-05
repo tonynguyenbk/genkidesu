@@ -72,26 +72,28 @@ export default function CreateProfileScreen() {
         {step === 1 && (
           <View style={styles.section}>
             <View style={styles.welcomeIcon}>
-              <Text style={{ fontSize: 56 }}>👋</Text>
+              <Ionicons name="leaf" size={44} color={theme.colors.primary} />
             </View>
             <Text style={styles.title}>Chào mừng đến Genki!</Text>
             <Text style={styles.subtitle}>
               Hãy tạo hồ sơ để Genki tính toán nhu cầu dinh dưỡng cá nhân hoá cho bạn.
             </Text>
             <View style={styles.features}>
-              {[
-                { icon: '🎯', text: 'Tính TDEE theo cơ thể thật của bạn' },
-                { icon: '📊', text: 'Theo dõi macro & vi chất mỗi ngày' },
-                { icon: '👨‍👩‍👧', text: 'Chia sẻ với gia đình' },
-              ].map((f) => (
-                <View key={f.icon} style={styles.featureRow}>
-                  <Text style={styles.featureIcon}>{f.icon}</Text>
-                  <Text style={styles.featureText}>{f.text}</Text>
+              {([
+                ['locate-outline', 'Tính TDEE theo cơ thể thật của bạn'],
+                ['stats-chart-outline', 'Theo dõi macro & vi chất mỗi ngày'],
+                ['people-outline', 'Chia sẻ với nhóm'],
+              ] as const).map(([icon, text]) => (
+                <View key={icon} style={styles.featureRow}>
+                  <View style={styles.featureGlyph}>
+                    <Ionicons name={icon} size={18} color={theme.colors.primary} />
+                  </View>
+                  <Text style={styles.featureText}>{text}</Text>
                 </View>
               ))}
             </View>
             <TouchableOpacity style={styles.btn} onPress={() => setStep(2)}>
-              <Text style={styles.btnText}>Bắt đầu →</Text>
+              <Text style={styles.btnText}>Bắt đầu</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -116,7 +118,7 @@ export default function CreateProfileScreen() {
             <View style={styles.field}>
               <Text style={styles.label}>Giới tính</Text>
               <View style={styles.chips}>
-                {([['male', 'Nam 👨'], ['female', 'Nữ 👩'], ['other', 'Khác']] as [Gender, string][]).map(([v, l]) => (
+                {([['male', 'Nam'], ['female', 'Nữ'], ['other', 'Khác']] as [Gender, string][]).map(([v, l]) => (
                   <TouchableOpacity
                     key={v}
                     style={[styles.chip, gender === v && styles.chipActive]}
@@ -213,7 +215,7 @@ export default function CreateProfileScreen() {
             >
               {createProfile.isPending
                 ? <ActivityIndicator color="#fff" />
-                : <Text style={styles.btnText}>Hoàn tất ✓</Text>
+                : <Text style={styles.btnText}>Hoàn tất</Text>
               }
             </TouchableOpacity>
 
@@ -268,7 +270,7 @@ export default function CreateProfileScreen() {
               onPress={() => router.push('/family/create')}
             >
               <Text style={[styles.btnText, { color: theme.colors.primary }]}>
-                + Tạo gia đình ngay
+                + Tạo nhóm ngay
               </Text>
             </TouchableOpacity>
           </View>
@@ -294,7 +296,10 @@ function createStyles(theme: Theme) {
     welcomeIcon: { alignItems: 'center', paddingTop: 24, paddingBottom: 8 },
     features: { gap: 12 },
     featureRow: { flexDirection: 'row', alignItems: 'center', gap: 12 },
-    featureIcon: { fontSize: 24, width: 36 },
+    featureGlyph: {
+      width: 34, height: 34, borderRadius: 10, backgroundColor: theme.colors.surfaceAlt,
+      alignItems: 'center', justifyContent: 'center',
+    },
     featureText: { fontSize: 15, color: theme.colors.text, flex: 1 },
 
     field: { gap: 8 },

@@ -86,7 +86,7 @@ export default function LoginScreen() {
             <Text style={styles.logoKanji}>元気</Text>
           </View>
           <Text style={styles.appName}>Genki</Text>
-          <Text style={styles.tagline}>Khoẻ mỗi ngày 🥗</Text>
+          <Text style={styles.tagline}>Khoẻ mỗi ngày</Text>
           <Text style={styles.sub}>Theo dõi dinh dưỡng cho cả gia đình</Text>
         </View>
 

@@ -7,16 +7,13 @@ import { Ionicons } from '@expo/vector-icons';
 import type { Theme } from '@genki/ui';
 import { trpc } from '../../../lib/trpc';
 import { useAppTheme, useThemedStyles } from '../../../contexts/ThemeContext';
+import { mealIcon, mealLabel } from '../../../lib/mealTypes';
 
 const TYPE_COLORS: Record<string, string> = {
-  adult: '#2ECC71', senior: '#F59E0B', teen: '#8B5CF6', baby: '#EC4899',
+  adult: '#34C759', senior: '#FF9F0A', teen: '#AF52DE', baby: '#FF2D55',
 };
 const TYPE_LABELS: Record<string, string> = {
   adult: 'Người lớn', baby: 'Em bé', teen: 'Thiếu niên', senior: 'Người cao tuổi',
-};
-const MEAL_LABELS: Record<string, string> = {
-  breakfast: '🌅 Sáng', lunch: '☀️ Trưa', dinner: '🌙 Tối',
-  snack: '🍎 Snack', baby_meal: '🍼 Ăn dặm', formula: '🍼 Sữa',
 };
 
 function CalorieBar({ eaten, goal, color }: { eaten: number; goal: number; color: string }) {
@@ -169,8 +166,8 @@ function PrivacyCard({ profileId }: { profileId: string }) {
       <Text style={styles.cardTitle}>Quyền riêng tư</Text>
       <View style={styles.privacyRow}>
         <View style={{ flex: 1, marginRight: 12 }}>
-          <Text style={styles.privacyLabel}>Hiển thị với gia đình</Text>
-          <Text style={styles.privacySub}>Cho phép gia đình xem dinh dưỡng & cảnh báo của hồ sơ này</Text>
+          <Text style={styles.privacyLabel}>Hiển thị với nhóm</Text>
+          <Text style={styles.privacySub}>Cho phép nhóm xem dinh dưỡng & cảnh báo của hồ sơ này</Text>
         </View>
         <Switch
           value={showDetails}
@@ -183,7 +180,7 @@ function PrivacyCard({ profileId }: { profileId: string }) {
       <View style={[styles.privacyRow, !showDetails && { opacity: 0.4 }]}>
         <View style={{ flex: 1, marginRight: 12 }}>
           <Text style={styles.privacyLabel}>Hiển thị chi tiết bữa ăn</Text>
-          <Text style={styles.privacySub}>Cho phép gia đình xem từng món đã ăn</Text>
+          <Text style={styles.privacySub}>Cho phép nhóm xem từng món đã ăn</Text>
         </View>
         <Switch
           value={showMeals}
@@ -222,7 +219,7 @@ export default function MemberDetailScreen() {
   );
 
   const p = profile.data as any;
-  const color = TYPE_COLORS[p?.type ?? 'adult'] ?? '#2ECC71';
+  const color = TYPE_COLORS[p?.type ?? 'adult'] ?? '#34C759';
   const initial = p?.name?.[0]?.toUpperCase() ?? '?';
 
   const todayUtc = today.toISOString().slice(0, 10);
@@ -296,7 +293,7 @@ export default function MemberDetailScreen() {
             meals.map((meal: any) => (
               <View key={meal.id} style={styles.mealRow}>
                 <Text style={styles.mealType}>
-                  {MEAL_LABELS[meal.mealType as string] ?? meal.mealType}
+                  {mealLabel(meal.mealType as string)}
                 </Text>
                 <Text style={styles.mealCal}>
                 {Math.round((meal.items ?? []).reduce((s: number, i: any) => s + (i.calories ?? 0), 0))} kcal

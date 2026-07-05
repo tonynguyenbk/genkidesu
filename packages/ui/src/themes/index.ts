@@ -47,46 +47,50 @@ export interface Theme {
   };
 }
 
+// Apple HIG design language (owner decision 2026-07-04): iOS system palette,
+// SF Pro type scale (system font — never bundle SF on Android), radius 12 for
+// cards, hairline alpha separators, true-black dark mode.
 const baseTheme: Omit<Theme, 'colors' | 'typography'> = {
   spacing: { xs: 4, sm: 8, md: 16, lg: 24, xl: 32 },
-  borderRadius: { sm: 4, md: 8, lg: 16, full: 9999 },
+  borderRadius: { sm: 8, md: 12, lg: 16, full: 9999 },
 };
 
 // Neutrals + semantic colors shared by every persona, split by color scheme.
+// Values follow iOS system colors (label hierarchy via alpha, not grey ramps).
 const sharedColors: Record<ColorScheme, Omit<Theme['colors'], 'primary' | 'secondary' | 'background' | 'surfaceAlt'>> = {
   light: {
     surface: '#FFFFFF',
-    text: '#111827',
-    textSecondary: '#6B7280',
-    textTertiary: '#9CA3AF',
-    border: '#E5E7EB',
-    divider: '#F3F4F6',
-    error: '#EF4444',
-    errorBg: '#FEF2F2',
-    success: '#22C55E',
-    successBg: '#D1FAE5',
-    warning: '#F59E0B',
-    warningBg: '#FFFBEB',
-    info: '#3B82F6',
-    infoBg: '#EFF6FF',
+    text: '#000000',
+    textSecondary: 'rgba(60,60,67,0.60)',
+    textTertiary: 'rgba(60,60,67,0.30)',
+    border: 'rgba(60,60,67,0.29)',
+    divider: 'rgba(60,60,67,0.12)',
+    error: '#FF3B30',
+    errorBg: '#FFEBE9',
+    success: '#34C759',
+    successBg: '#E3F7E9',
+    warning: '#FF9500',
+    warningBg: '#FFF3E0',
+    info: '#007AFF',
+    infoBg: '#E5F1FF',
     overlay: '#00000066',
     shadow: '#000000',
   },
   dark: {
-    surface: '#161B22',
-    text: '#F3F4F6',
-    textSecondary: '#9CA3AF',
-    textTertiary: '#6B7280',
-    border: '#2D333B',
-    divider: '#21262D',
-    error: '#F87171',
-    errorBg: '#2D1416',
-    success: '#34D399',
-    successBg: '#102420',
-    warning: '#FBBF24',
-    warningBg: '#2A2010',
-    info: '#60A5FA',
-    infoBg: '#111D2E',
+    surface: '#1C1C1E',
+    text: '#FFFFFF',
+    textSecondary: 'rgba(235,235,245,0.60)',
+    textTertiary: 'rgba(235,235,245,0.30)',
+    border: 'rgba(84,84,88,0.60)',
+    divider: 'rgba(84,84,88,0.35)',
+    error: '#FF453A',
+    errorBg: '#3A1D1B',
+    success: '#30D158',
+    successBg: '#12291A',
+    warning: '#FF9F0A',
+    warningBg: '#332410',
+    info: '#0A84FF',
+    infoBg: '#102A43',
     overlay: '#000000B3',
     shadow: '#000000',
   },
@@ -95,52 +99,57 @@ const sharedColors: Record<ColorScheme, Omit<Theme['colors'], 'primary' | 'secon
 // Persona-specific brand color, page background, and tinted "alt surface"
 // (icon circles, badges) for each color scheme.
 const personaColors: Record<ProfileType, Record<ColorScheme, Pick<Theme['colors'], 'primary' | 'secondary' | 'background' | 'surfaceAlt'>>> = {
+  // iOS systemGreen; grouped background #F2F2F7 light / true black dark
   adult: {
-    light: { primary: '#2ECC71', secondary: '#27AE60', background: '#F8FBF9', surfaceAlt: '#F0FDF4' },
-    dark: { primary: '#2ECC71', secondary: '#34D399', background: '#0D1117', surfaceAlt: '#16241D' },
+    light: { primary: '#34C759', secondary: '#248A3D', background: '#F2F2F7', surfaceAlt: '#E9F8EE' },
+    dark: { primary: '#30D158', secondary: '#30DB5B', background: '#000000', surfaceAlt: '#12291A' },
   },
   senior: {
-    light: { primary: '#2ECC71', secondary: '#27AE60', background: '#F8FBF9', surfaceAlt: '#F0FDF4' },
-    dark: { primary: '#2ECC71', secondary: '#34D399', background: '#0D1117', surfaceAlt: '#16241D' },
+    light: { primary: '#34C759', secondary: '#248A3D', background: '#F2F2F7', surfaceAlt: '#E9F8EE' },
+    dark: { primary: '#30D158', secondary: '#30DB5B', background: '#000000', surfaceAlt: '#12291A' },
   },
+  // iOS systemPurple
   teen: {
-    light: { primary: '#8B5CF6', secondary: '#7C3AED', background: '#FAFAFA', surfaceAlt: '#F5F3FF' },
-    dark: { primary: '#A78BFA', secondary: '#8B5CF6', background: '#0D1117', surfaceAlt: '#1E1B2E' },
+    light: { primary: '#AF52DE', secondary: '#8944AB', background: '#F2F2F7', surfaceAlt: '#F5EAFB' },
+    dark: { primary: '#BF5AF2', secondary: '#DA8FFF', background: '#000000', surfaceAlt: '#28182F' },
   },
+  // iOS systemPink
   baby: {
-    light: { primary: '#EC4899', secondary: '#DB2777', background: '#FFF5F9', surfaceAlt: '#FCE7F3' },
-    dark: { primary: '#F472B6', secondary: '#EC4899', background: '#0D1117', surfaceAlt: '#2A1620' },
+    light: { primary: '#FF2D55', secondary: '#D30F45', background: '#F2F2F7', surfaceAlt: '#FFECEF' },
+    dark: { primary: '#FF375F', secondary: '#FF6482', background: '#000000', surfaceAlt: '#331418' },
   },
 };
 
+// SF Pro scale: body 17 / subhead 15 / title3 20 / large-title-ish 28.
+// Senior bumps every step (HIG Dynamic Type xxxLarge equivalent).
 const typographyByPersona: Record<ProfileType, Theme['typography']> = {
   adult: {
-    fontSizeBase: 16,
-    fontSizeSmall: 14,
-    fontSizeLarge: 18,
-    fontSizeTitle: 24,
-    lineHeightBase: 24,
+    fontSizeBase: 17,
+    fontSizeSmall: 15,
+    fontSizeLarge: 20,
+    fontSizeTitle: 28,
+    lineHeightBase: 22,
   },
   senior: {
-    fontSizeBase: 18,
-    fontSizeSmall: 16,
-    fontSizeLarge: 22,
-    fontSizeTitle: 28,
-    lineHeightBase: 28,
+    fontSizeBase: 19,
+    fontSizeSmall: 17,
+    fontSizeLarge: 23,
+    fontSizeTitle: 32,
+    lineHeightBase: 26,
   },
   teen: {
-    fontSizeBase: 16,
-    fontSizeSmall: 14,
-    fontSizeLarge: 18,
-    fontSizeTitle: 24,
-    lineHeightBase: 24,
+    fontSizeBase: 17,
+    fontSizeSmall: 15,
+    fontSizeLarge: 20,
+    fontSizeTitle: 28,
+    lineHeightBase: 22,
   },
   baby: {
-    fontSizeBase: 16,
-    fontSizeSmall: 14,
-    fontSizeLarge: 18,
-    fontSizeTitle: 24,
-    lineHeightBase: 24,
+    fontSizeBase: 17,
+    fontSizeSmall: 15,
+    fontSizeLarge: 20,
+    fontSizeTitle: 28,
+    lineHeightBase: 22,
   },
 };
 

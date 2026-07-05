@@ -11,7 +11,7 @@ import type { Theme } from '@genki/ui';
 import { useAppTheme, useThemedStyles } from '../../contexts/ThemeContext';
 
 const TYPE_COLORS: Record<string, string> = {
-  adult: '#2ECC71', senior: '#F59E0B', teen: '#8B5CF6', baby: '#EC4899',
+  adult: '#34C759', senior: '#FF9F0A', teen: '#AF52DE', baby: '#FF2D55',
 };
 const TYPE_LABELS: Record<string, string> = {
   adult: 'Người lớn', baby: 'Em bé', teen: 'Thiếu niên', senior: 'Người cao tuổi',
@@ -109,7 +109,7 @@ function FamilyOverviewCard({ members }: { members: any[] }) {
 
   return (
     <View style={styles.overviewCard}>
-      <Text style={styles.overviewTitle}>Tổng quan gia đình hôm nay</Text>
+      <Text style={styles.overviewTitle}>Tổng quan nhóm hôm nay</Text>
       <View style={styles.overviewRow}>
         <View style={styles.overviewStat}>
           <Text style={styles.overviewVal}>{totalCal.toLocaleString()}</Text>
@@ -182,7 +182,10 @@ function MemberCard({ member, onPress }: { member: Record<string, any>; onPress:
             </Text>
           </View>
           {isPrivate ? (
-            <Text style={styles.privateLabel}>🔒 Riêng tư</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+              <Ionicons name="lock-closed-outline" size={13} color={theme.colors.textTertiary} />
+              <Text style={styles.privateLabel}>Riêng tư</Text>
+            </View>
           ) : (
             <View style={{ alignItems: 'flex-end' }}>
               <Text style={[styles.memberCal, { color }]}>{Math.round(caloriesEaten)} kcal</Text>
@@ -219,12 +222,14 @@ function EmptyState() {
   const styles = useThemedStyles(createStyles);
   return (
     <View style={styles.emptyState}>
-      <Text style={styles.emptyEmoji}>👨‍👩‍👧‍👦</Text>
-      <Text style={styles.emptyTitle}>Chưa có gia đình</Text>
-      <Text style={styles.emptySub}>Tạo nhóm để theo dõi dinh dưỡng cùng cả nhà</Text>
+      <View style={styles.emptyGlyph}>
+        <Ionicons name="people-outline" size={38} color={theme.colors.primary} />
+      </View>
+      <Text style={styles.emptyTitle}>Chưa có nhóm</Text>
+      <Text style={styles.emptySub}>Tạo nhóm để theo dõi dinh dưỡng cùng nhau</Text>
       <TouchableOpacity style={styles.createBtn} onPress={() => router.push('/family/create')}>
         <Ionicons name="home-outline" size={18} color="#fff" />
-        <Text style={styles.createBtnText}>Tạo gia đình</Text>
+        <Text style={styles.createBtnText}>Tạo nhóm</Text>
       </TouchableOpacity>
       <TouchableOpacity style={styles.joinBtn} onPress={() => router.push('/family/join')}>
         <Ionicons name="link-outline" size={18} color={theme.colors.primary} />
@@ -319,7 +324,7 @@ export default function FamilyScreen() {
             {/* Invite code banner */}
             <TouchableOpacity style={styles.inviteBanner} onPress={handleCopyCode} activeOpacity={0.8}>
               <View>
-                <Text style={styles.inviteLabel}>Mã mời gia đình</Text>
+                <Text style={styles.inviteLabel}>Mã mời nhóm</Text>
                 <Text style={styles.inviteCode}>{family.inviteCode}</Text>
               </View>
               <View style={styles.copyChip}>
@@ -379,7 +384,7 @@ export default function FamilyScreen() {
         <TouchableOpacity style={styles.overlay} activeOpacity={1} onPress={() => setShowAddProfile(false)}>
           <View style={styles.sheet}>
             <View style={styles.sheetHeader}>
-              <Text style={styles.sheetTitle}>Thêm vào gia đình</Text>
+              <Text style={styles.sheetTitle}>Thêm vào nhóm</Text>
               <TouchableOpacity onPress={() => setShowAddProfile(false)}>
                 <Ionicons name="close" size={22} color={theme.colors.textSecondary} />
               </TouchableOpacity>
@@ -387,7 +392,7 @@ export default function FamilyScreen() {
             <ScrollView>
               {unaddedProfiles.length === 0 ? (
                 <View style={{ padding: 24, alignItems: 'center' }}>
-                  <Text style={{ color: theme.colors.textTertiary, fontSize: 14 }}>Tất cả hồ sơ đã trong gia đình</Text>
+                  <Text style={{ color: theme.colors.textTertiary, fontSize: 14 }}>Tất cả hồ sơ đã trong nhóm</Text>
                   <TouchableOpacity
                     style={[styles.actionBtn, { marginTop: 16, paddingHorizontal: 24 }]}
                     onPress={() => { setShowAddProfile(false); router.push('/profile/create'); }}
@@ -567,7 +572,10 @@ function createStyles(theme: Theme) {
 
     // Empty state
     emptyState: { alignItems: 'center', paddingTop: 80, paddingHorizontal: 32, gap: 12 },
-    emptyEmoji: { fontSize: 64 },
+    emptyGlyph: {
+      width: 76, height: 76, borderRadius: 22, backgroundColor: theme.colors.surfaceAlt,
+      alignItems: 'center', justifyContent: 'center', marginBottom: 8,
+    },
     emptyTitle: { fontSize: 20, fontWeight: '800', color: theme.colors.text },
     emptySub: { fontSize: 14, color: theme.colors.textTertiary, textAlign: 'center', lineHeight: 20 },
     createBtn: {

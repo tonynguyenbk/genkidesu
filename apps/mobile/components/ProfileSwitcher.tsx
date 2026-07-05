@@ -7,12 +7,9 @@ import { useActiveProfile } from '../hooks/useActiveProfile';
 import { useAppTheme, useThemedStyles } from '../contexts/ThemeContext';
 
 const TYPE_COLORS: Record<string, string> = {
-  adult: '#2ECC71', senior: '#F59E0B', teen: '#8B5CF6', baby: '#EC4899',
+  adult: '#34C759', senior: '#FF9F0A', teen: '#AF52DE', baby: '#FF2D55',
 };
 
-const TYPE_ICONS: Record<string, string> = {
-  adult: '👤', senior: '👴', teen: '🧑', baby: '👶',
-};
 
 export function ProfileSwitcher() {
   const [open, setOpen] = useState(false);
@@ -21,7 +18,7 @@ export function ProfileSwitcher() {
   const { theme } = useAppTheme();
   const styles = useThemedStyles(createStyles);
 
-  const color = TYPE_COLORS[activeProfile?.type ?? 'adult'] ?? '#2ECC71';
+  const color = TYPE_COLORS[activeProfile?.type ?? 'adult'] ?? '#34C759';
   // Normalize to ASCII so Vietnamese diacritics (Ô, Ă, Đ…) don't render as
   // ambiguous glyphs at small sizes inside the avatar circle.
   const initial = (activeProfile?.name?.[0] ?? 'G')
@@ -64,15 +61,17 @@ export function ProfileSwitcher() {
               data={profiles}
               keyExtractor={(p) => p.id}
               renderItem={({ item }) => {
-                const pColor = TYPE_COLORS[item.type] ?? '#2ECC71';
+                const pColor = TYPE_COLORS[item.type] ?? '#34C759';
                 const isActive = item.id === activeProfile?.id;
                 return (
                   <TouchableOpacity
                     style={[styles.profileRow, isActive && styles.profileRowActive]}
                     onPress={() => { setActiveProfile(item.id); setOpen(false); }}
                   >
-                    <View style={[styles.profileAvatar, { backgroundColor: pColor + '20' }]}>
-                      <Text style={{ fontSize: 20 }}>{TYPE_ICONS[item.type] ?? '👤'}</Text>
+                    <View style={[styles.profileAvatar, { backgroundColor: pColor }]}>
+                      <Text style={{ fontSize: 16, fontWeight: '700', color: '#fff' }}>
+                        {item.name[0]?.toUpperCase() ?? '?'}
+                      </Text>
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.profileName}>{item.name}</Text>

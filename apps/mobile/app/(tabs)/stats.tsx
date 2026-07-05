@@ -1,4 +1,5 @@
-import { View, Text, StyleSheet, SafeAreaView, ScrollView, Platform, ActivityIndicator } from 'react-native';
+import { View, Text, StyleSheet, SafeAreaView, ScrollView, TouchableOpacity, Platform, ActivityIndicator } from 'react-native';
+import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import type { Theme } from '@genki/ui';
 import { trpc } from '../../lib/trpc';
@@ -6,28 +7,36 @@ import { ProfileSwitcher } from '../../components/ProfileSwitcher';
 import { useActiveProfile } from '../../hooks/useActiveProfile';
 import { useAppTheme, useThemedStyles } from '../../contexts/ThemeContext';
 
-function WeekBar({ day, pct, active, cal }: { day: string; pct: number; active: boolean; cal: number }) {
+const CHART_HEIGHT = 120; // px — fixed so bar heights compute reliably on web
+
+function WeekBar({ day, cal, scaleMax, active, onPress }: {
+  day: string; cal: number; scaleMax: number; active: boolean; onPress: () => void;
+}) {
   const { theme } = useAppTheme();
   const styles = useThemedStyles(createStyles);
+  const barH = cal > 0 ? Math.max((cal / scaleMax) * CHART_HEIGHT, 4) : 0;
   return (
-    <View style={styles.barCol}>
-      <Text style={styles.barCalLabel}>{cal > 0 ? cal : ''}</Text>
-      <View style={styles.barTrack}>
-        <View style={[styles.barFill, { height: `${Math.max(pct, 2)}%` as any, backgroundColor: active ? theme.colors.primary : theme.colors.successBg }]} />
+    <TouchableOpacity style={styles.barCol} onPress={onPress} activeOpacity={0.7}>
+      <Text style={styles.barCalLabel}>{cal > 0 ? Math.round(cal) : ''}</Text>
+      <View style={[styles.barTrack, { height: CHART_HEIGHT }]}>
+        <View style={[styles.barFill, { height: barH, backgroundColor: active ? theme.colors.primary : theme.colors.successBg }]} />
       </View>
       <Text style={[styles.barDay, active && { color: theme.colors.primary, fontWeight: '700' }]}>{day}</Text>
-    </View>
+    </TouchableOpacity>
   );
 }
 
 function StatCard({ label, value, unit, icon, color, change }: {
-  label: string; value: string; unit: string; icon: string; color: string; change?: string;
+  label: string; value: string; unit: string;
+  icon: React.ComponentProps<typeof Ionicons>['name']; color: string; change?: string;
 }) {
   const { theme } = useAppTheme();
   const styles = useThemedStyles(createStyles);
   return (
     <View style={[styles.statCard, { borderLeftColor: color, borderLeftWidth: 3 }]}>
-      <Text style={styles.statIcon}>{icon}</Text>
+      <View style={[styles.statGlyph, { backgroundColor: color + '1A' }]}>
+        <Ionicons name={icon} size={18} color={color} />
+      </View>
       <View style={{ flex: 1 }}>
         <Text style={styles.statLabel}>{label}</Text>
         <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 3 }}>
@@ -43,6 +52,7 @@ function StatCard({ label, value, unit, icon, color, change }: {
 const DAY_NAMES = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
 
 export default function StatsScreen() {
+  const router = useRouter();
   const { theme } = useAppTheme();
   const styles = useThemedStyles(createStyles);
   const { activeProfile: profile } = useActiveProfile();
@@ -55,18 +65,28 @@ export default function StatsScreen() {
     return d;
   });
 
-  // Query weekly summaries
-  const weeklySummaries = last7Days.map((date) => {
+  // Compute totals from the meal logs themselves (not the daily_summaries table,
+  // whose summary_date can drift a day under server-timezone rounding). Keeps
+  // stats consistent with the home screen, which also derives from logs.
+  const weeklyLogs = last7Days.map((date) => {
     const d = new Date(date);
     d.setHours(12, 0, 0, 0);
-    return trpc.meal.getDailySummary.useQuery(
+    return trpc.meal.getDailyLogs.useQuery(
       { profileId: profile?.id ?? '', date: d.toISOString() },
       { enabled: !!profile?.id, retry: false },
     );
   });
 
   const caloriesGoal = (profile?.nutritionTargets as any)?.calories ?? 1920;
-  const summaryData = weeklySummaries.map((q) => q.data?.totalCalories ?? 0);
+  const dayTotals = weeklyLogs.map((q) => {
+    const items = (q.data ?? []).flatMap((l) => l.items);
+    return {
+      totalCalories: items.reduce((s, i) => s + i.calories, 0),
+      totalProteinG: items.reduce((s, i) => s + i.proteinG, 0),
+      mealCount: (q.data ?? []).length,
+    };
+  });
+  const summaryData = dayTotals.map((t) => t.totalCalories);
   const maxCal = Math.max(...summaryData, 1);
 
   // Calc weekly averages
@@ -76,7 +96,7 @@ export default function StatsScreen() {
 
   // Today's data
   const todayIdx = 6;
-  const todayData = weeklySummaries[todayIdx]?.data;
+  const todayData = dayTotals[todayIdx];
   const streak = (() => {
     let count = 0;
     for (let i = todayIdx; i >= 0; i--) {
@@ -86,7 +106,7 @@ export default function StatsScreen() {
     return count;
   })();
 
-  const isLoading = weeklySummaries.some((q) => q.isLoading);
+  const isLoading = weeklyLogs.some((q) => q.isLoading);
 
   return (
     <SafeAreaView style={styles.container}>
@@ -113,14 +133,18 @@ export default function StatsScreen() {
                 const dayOfWeek = date.getDay();
                 const dayName = DAY_NAMES[dayOfWeek === 0 ? 6 : dayOfWeek - 1]!;
                 const cal = summaryData[i] ?? 0;
-                const pct = (cal / Math.max(maxCal, caloriesGoal)) * 100;
                 return (
                   <WeekBar
                     key={i}
                     day={dayName}
-                    pct={pct}
+                    cal={cal}
+                    scaleMax={Math.max(maxCal, caloriesGoal)}
                     active={i === todayIdx}
-                    cal={cal > 0 ? Math.round(cal) : 0}
+                    onPress={() => {
+                      if (!profile?.id) return;
+                      const d = new Date(date); d.setHours(12, 0, 0, 0);
+                      router.push({ pathname: '/day-detail', params: { date: d.toISOString(), profileId: profile.id } });
+                    }}
                   />
                 );
               })}
@@ -132,20 +156,20 @@ export default function StatsScreen() {
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Tuần này</Text>
           <StatCard
-            label="Calo hôm nay" icon="🔥" color={theme.colors.warning}
+            label="Calo hôm nay" icon="flame-outline" color={theme.colors.warning}
             value={Math.round(todayData?.totalCalories ?? 0).toLocaleString()} unit="kcal"
             change={caloriesGoal > 0 ? `${Math.round(((todayData?.totalCalories ?? 0) / caloriesGoal) * 100)}% mục tiêu` : undefined}
           />
           <StatCard
-            label="Protein hôm nay" icon="💪" color={theme.colors.info}
+            label="Protein hôm nay" icon="barbell-outline" color={theme.colors.info}
             value={(todayData?.totalProteinG ?? 0).toFixed(0)} unit="g"
           />
           <StatCard
-            label="Tổng calo tuần" icon="📊" color={theme.colors.secondary}
+            label="Tổng calo tuần" icon="stats-chart-outline" color={theme.colors.secondary}
             value={Math.round(totalCalories).toLocaleString()} unit="kcal"
           />
           <StatCard
-            label="Số bữa hôm nay" icon="🍽️" color={theme.colors.primary}
+            label="Số bữa hôm nay" icon="restaurant-outline" color={theme.colors.primary}
             value={String(todayData?.mealCount ?? 0)} unit="bữa"
           />
         </View>
@@ -154,7 +178,7 @@ export default function StatsScreen() {
         {streak > 0 && (
           <View style={[styles.card, { backgroundColor: theme.colors.surfaceAlt }]}>
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
-              <Text style={{ fontSize: 36 }}>🔥</Text>
+              <Ionicons name="flame" size={34} color={theme.colors.warning} />
               <View>
                 <Text style={styles.streakNum}>{streak} ngày</Text>
                 <Text style={styles.streakLabel}>chuỗi ghi nhận liên tiếp</Text>
@@ -167,7 +191,7 @@ export default function StatsScreen() {
         {/* Empty state */}
         {!isLoading && totalCalories === 0 && (
           <View style={styles.emptyCard}>
-            <Text style={{ fontSize: 40, textAlign: 'center' }}>📊</Text>
+            <Ionicons name="stats-chart-outline" size={36} color={theme.colors.textTertiary} style={{ alignSelf: 'center' }} />
             <Text style={styles.emptyTitle}>Chưa có dữ liệu</Text>
             <Text style={styles.emptySub}>Hãy ghi nhận bữa ăn đầu tiên để xem thống kê</Text>
           </View>
@@ -194,11 +218,11 @@ function createStyles(theme: Theme) {
     },
     cardTitle: { fontSize: 15, fontWeight: '700', color: theme.colors.text },
     cardSub: { fontSize: 12, color: theme.colors.textTertiary, marginTop: 2, marginBottom: 16 },
-    barChart: { flexDirection: 'row', gap: 4, height: 130, alignItems: 'flex-end' },
+    barChart: { flexDirection: 'row', gap: 4, alignItems: 'flex-end' },
     barCol: { flex: 1, alignItems: 'center', gap: 4 },
-    barCalLabel: { fontSize: 9, color: theme.colors.textTertiary, textAlign: 'center' },
+    barCalLabel: { fontSize: 9, color: theme.colors.textTertiary, textAlign: 'center', minHeight: 12 },
     barTrack: {
-      width: '100%', flex: 1, backgroundColor: theme.colors.divider, borderRadius: 6,
+      width: '100%', backgroundColor: theme.colors.divider, borderRadius: 6,
       justifyContent: 'flex-end', overflow: 'hidden',
     },
     barFill: { width: '100%', borderRadius: 6 },
@@ -210,7 +234,10 @@ function createStyles(theme: Theme) {
       flexDirection: 'row', alignItems: 'center', gap: 12,
       shadowColor: theme.colors.shadow, shadowOpacity: 0.03, shadowRadius: 4, elevation: 1,
     },
-    statIcon: { fontSize: 24 },
+    statGlyph: {
+      width: 34, height: 34, borderRadius: 10,
+      alignItems: 'center', justifyContent: 'center',
+    },
     statLabel: { fontSize: 12, color: theme.colors.textTertiary },
     statValue: { fontSize: 22, fontWeight: '800' },
     statUnit: { fontSize: 12, color: theme.colors.textTertiary },

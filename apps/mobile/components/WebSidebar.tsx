@@ -7,18 +7,18 @@ import { useActiveProfile } from '../hooks/useActiveProfile';
 import { useAppTheme, useThemedStyles } from '../contexts/ThemeContext';
 
 const TYPE_COLORS: Record<string, string> = {
-  adult: '#2ECC71', senior: '#F59E0B', teen: '#8B5CF6', baby: '#EC4899',
+  adult: '#34C759', senior: '#FF9F0A', teen: '#AF52DE', baby: '#FF2D55',
 };
 
 const PLAN_LABELS: Record<string, string> = {
-  free: 'Miễn phí', pro: '👑 Pro', family: '👨‍👩‍👧‍👦 Gia đình',
+  free: 'Miễn phí', pro: 'Pro', family: 'Gia đình',
 };
 
 const NAV_ITEMS = [
   { href: '/(tabs)', label: 'Trang chủ', icon: 'home' as const, activeIcon: 'home' as const },
-  { href: '/(tabs)/camera', label: 'Chụp ảnh', icon: 'camera-outline' as const, activeIcon: 'camera' as const },
   { href: '/(tabs)/stats', label: 'Thống kê', icon: 'bar-chart-outline' as const, activeIcon: 'bar-chart' as const },
-  { href: '/(tabs)/family', label: 'Gia đình', icon: 'people-outline' as const, activeIcon: 'people' as const },
+  { href: '/(tabs)/camera', label: 'Chụp ảnh', icon: 'camera-outline' as const, activeIcon: 'camera' as const },
+  { href: '/(tabs)/group', label: 'Nhóm', icon: 'people-outline' as const, activeIcon: 'people' as const },
   { href: '/(tabs)/profile', label: 'Hồ sơ', icon: 'person-circle-outline' as const, activeIcon: 'person-circle' as const },
 ];
 
@@ -31,7 +31,7 @@ export function WebSidebar() {
   const { activeProfile: profile } = useActiveProfile();
   const subscription = trpc.subscription.getStatus.useQuery(undefined, { retry: false });
 
-  const avatarColor = TYPE_COLORS[profile?.type ?? 'adult'] ?? '#2ECC71';
+  const avatarColor = TYPE_COLORS[profile?.type ?? 'adult'] ?? '#34C759';
   const initial = profile?.name?.[0]?.toUpperCase() ?? 'G';
   const planLabel = PLAN_LABELS[subscription.data?.plan ?? 'free'] ?? 'Miễn phí';
 

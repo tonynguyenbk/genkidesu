@@ -4,7 +4,7 @@ export type PersonaType = 'adult' | 'baby' | 'teen' | 'senior';
 
 // One brand color across all profiles — accent color is a style choice,
 // not an accessibility need, so we keep a single unified look for everyone.
-const BRAND_COLOR = '#2ECC71';
+const BRAND_COLOR = '#34C759';
 
 const PERSONA_FONT_SCALE: Record<PersonaType, number> = {
   adult:  1.0,

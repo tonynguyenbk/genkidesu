@@ -10,13 +10,15 @@ import { trpc } from '../../lib/trpc';
 import { useActiveProfile } from '../../hooks/useActiveProfile';
 import { useAppTheme, useThemedStyles } from '../../contexts/ThemeContext';
 
-const CONDITION_META: Record<string, { label: string; icon: string; desc: string; color: string }> = {
-  diabetes_type2: { label: 'Tiểu đường type 2', icon: '🩸', desc: 'Kiểm soát đường huyết, hạn chế carbs', color: '#DC2626' },
-  hypertension:   { label: 'Huyết áp cao',      icon: '💓', desc: 'Hạn chế muối và thực phẩm chế biến sẵn', color: '#EA580C' },
-  gout:           { label: 'Gout',               icon: '🦴', desc: 'Hạn chế purin: hải sản, nội tạng, thịt đỏ', color: '#9333EA' },
-  heart_disease:  { label: 'Tim mạch',           icon: '❤️', desc: 'Hạn chế chất béo bão hòa và đồ chiên rán', color: '#E11D48' },
-  kidney:         { label: 'Bệnh thận',          icon: '🫘', desc: 'Kiểm soát protein, kali và photpho', color: '#0284C7' },
-  allergy:        { label: 'Dị ứng thực phẩm',  icon: '⚠️', desc: 'Cảnh báo khi phát hiện thực phẩm gây dị ứng', color: '#CA8A04' },
+type IoniconName = React.ComponentProps<typeof Ionicons>['name'];
+
+const CONDITION_META: Record<string, { label: string; icon: IoniconName; desc: string; color: string }> = {
+  diabetes_type2: { label: 'Tiểu đường type 2', icon: 'water-outline',    desc: 'Kiểm soát đường huyết, hạn chế carbs', color: '#FF3B30' },
+  hypertension:   { label: 'Huyết áp cao',      icon: 'pulse-outline',    desc: 'Hạn chế muối và thực phẩm chế biến sẵn', color: '#FF9500' },
+  gout:           { label: 'Gout',               icon: 'body-outline',     desc: 'Hạn chế purin: hải sản, nội tạng, thịt đỏ', color: '#AF52DE' },
+  heart_disease:  { label: 'Tim mạch',           icon: 'heart-outline',    desc: 'Hạn chế chất béo bão hòa và đồ chiên rán', color: '#FF2D55' },
+  kidney:         { label: 'Bệnh thận',          icon: 'filter-outline',   desc: 'Kiểm soát protein, kali và photpho', color: '#007AFF' },
+  allergy:        { label: 'Dị ứng thực phẩm',  icon: 'alert-circle-outline', desc: 'Cảnh báo khi phát hiện thực phẩm gây dị ứng', color: '#FF9500' },
 };
 
 const ALL_CONDITIONS = Object.keys(CONDITION_META) as (keyof typeof CONDITION_META)[];
@@ -83,7 +85,7 @@ export default function HealthConditionsScreen() {
             <ActivityIndicator color={theme.colors.primary} style={{ margin: 20 }} />
           ) : (conditions.data ?? []).length === 0 ? (
             <View style={styles.emptyCard}>
-              <Text style={styles.emptyIcon}>✅</Text>
+              <Ionicons name="shield-checkmark-outline" size={32} color={theme.colors.success} />
               <Text style={styles.emptyText}>Chưa có bệnh lý nào được ghi nhận</Text>
             </View>
           ) : (
@@ -96,7 +98,9 @@ export default function HealthConditionsScreen() {
                     key={c.id}
                     style={[styles.conditionRow, i < (conditions.data!.length - 1) && styles.conditionRowBorder]}
                   >
-                    <Text style={styles.conditionIcon}>{meta.icon}</Text>
+                    <View style={[styles.conditionGlyph, { backgroundColor: meta.color + '1A' }]}>
+                      <Ionicons name={meta.icon} size={18} color={meta.color} />
+                    </View>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.conditionLabel}>{meta.label}</Text>
                       <Text style={styles.conditionDesc}>{meta.desc}</Text>
@@ -158,7 +162,9 @@ export default function HealthConditionsScreen() {
                     }}
                     disabled={already || addMutation.isPending}
                   >
-                    <Text style={styles.optionIcon}>{meta.icon}</Text>
+                    <View style={[styles.conditionGlyph, { backgroundColor: meta.color + '1A' }]}>
+                      <Ionicons name={meta.icon} size={18} color={meta.color} />
+                    </View>
                     <View style={{ flex: 1 }}>
                       <Text style={[styles.optionLabel, already && { color: theme.colors.textTertiary }]}>{meta.label}</Text>
                       <Text style={styles.optionDesc}>{meta.desc}</Text>
@@ -207,7 +213,10 @@ function createStyles(theme: Theme) {
     emptyText: { fontSize: 14, color: theme.colors.textTertiary, textAlign: 'center' },
     conditionRow: { flexDirection: 'row', alignItems: 'center', padding: 14, gap: 12 },
     conditionRowBorder: { borderBottomWidth: 1, borderBottomColor: theme.colors.divider },
-    conditionIcon: { fontSize: 24 },
+    conditionGlyph: {
+      width: 34, height: 34, borderRadius: 10,
+      alignItems: 'center', justifyContent: 'center',
+    },
     conditionLabel: { fontSize: 14, fontWeight: '600', color: theme.colors.text },
     conditionDesc: { fontSize: 12, color: theme.colors.textTertiary, marginTop: 2 },
     removeBtn: { padding: 4 },

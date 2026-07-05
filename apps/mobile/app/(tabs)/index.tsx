@@ -2,11 +2,14 @@ import {
   View, Text, StyleSheet, SafeAreaView, ScrollView,
   TouchableOpacity, Platform, ActivityIndicator,
 } from 'react-native';
-import { useRouter } from 'expo-router';
+import { useRouter, useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import type { Theme } from '@genki/ui';
 import { trpc } from '../../lib/trpc';
 import { ProfileSwitcher } from '../../components/ProfileSwitcher';
+import { isSnackType } from '../../lib/mealTypes';
+import { formatMicros, sumMicros, formatMicroValue } from '../../lib/micronutrients';
 import { useProfileTheme } from '../../hooks/useProfileTheme';
 import { useActiveProfile } from '../../hooks/useActiveProfile';
 import { useAppTheme, useThemedStyles } from '../../contexts/ThemeContext';
@@ -17,10 +20,11 @@ const TODAY = new Date().toLocaleDateString('vi-VN', { weekday: 'long', day: 'nu
 const TODAY_ISO = new Date().toISOString();
 
 const MEAL_CONFIG = [
-  { type: 'breakfast', label: 'Bữa sáng', icon: '🌅' },
-  { type: 'lunch',     label: 'Bữa trưa', icon: '☀️'  },
-  { type: 'dinner',    label: 'Bữa tối',  icon: '🌙'  },
-  { type: 'snack',     label: 'Snack',    icon: '🍎'  },
+  { type: 'breakfast', label: 'Bữa sáng', icon: 'partly-sunny-outline', group: false },
+  { type: 'lunch',     label: 'Bữa trưa', icon: 'sunny-outline',        group: false },
+  { type: 'dinner',    label: 'Bữa tối',  icon: 'moon-outline',         group: false },
+  // "Bữa phụ" aggregates the 3 snack sub-types; tap → sub-type chooser screen.
+  { type: 'snack',     label: 'Bữa phụ',  icon: 'nutrition-outline',    group: true  },
 ] as const;
 
 // ─── Sub-components ──────────────────────────────────────────────────────────
@@ -74,7 +78,12 @@ function TeenStreakBanner({ streak, calories, goal }: {
   if (streak === 0 && calories === 0) return null;
   return (
     <View style={styles.streakBanner}>
-      <Text style={styles.streakFire}>{streak > 0 ? '🔥' : '⚡'}</Text>
+      <Ionicons
+        name={streak > 0 ? 'flame' : 'flash-outline'}
+        size={28}
+        color="#FF9500"
+        style={{ marginRight: 4 }}
+      />
       <View style={{ flex: 1 }}>
         {streak > 0
           ? <>
@@ -161,6 +170,16 @@ export default function HomeScreen() {
     { enabled: !!profile?.id, retry: false },
   );
 
+  // Refetch when tab comes into focus (e.g. after confirming a meal)
+  useFocusEffect(
+    useCallback(() => {
+      if (profile?.id) {
+        void summary.refetch();
+        void mealLogs.refetch();
+      }
+    }, [profile?.id]),
+  );
+
   // Streak calculation (last 7 days data)
   const last7Summaries = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(); d.setDate(d.getDate() - i); d.setHours(12, 0, 0, 0);
@@ -183,11 +202,22 @@ export default function HomeScreen() {
   const carbsGoal    = (profile?.nutritionTargets as any)?.carbs_g ?? 250;
   const fatGoal      = (profile?.nutritionTargets as any)?.fat_g ?? 65;
 
-  const eaten     = summary.data?.totalCalories ?? 0;
-  const proteinIn = summary.data?.totalProteinG ?? 0;
-  const carbsIn   = summary.data?.totalCarbsG ?? 0;
-  const fatIn     = summary.data?.totalFatG ?? 0;
+  // Derive today's totals straight from the logs so the ring/macros always match
+  // the meal list below. (Avoids the daily_summary table, whose summary_date can
+  // drift by a day due to server-timezone rounding.)
+  const todayItems = (mealLogs.data ?? []).flatMap((l) => l.items);
+  const eaten     = todayItems.reduce((s, i) => s + i.calories, 0);
+  const proteinIn = todayItems.reduce((s, i) => s + i.proteinG, 0);
+  const carbsIn   = todayItems.reduce((s, i) => s + i.carbsG, 0);
+  const fatIn     = todayItems.reduce((s, i) => s + i.fatG, 0);
   const pct       = caloriesGoal > 0 ? Math.round((eaten / caloriesGoal) * 100) : 0;
+
+  // Aggregated micronutrients across today's items (for the "Xem thêm vi chất" block).
+  const microRows = formatMicros(sumMicros(todayItems.map((i) => i.micronutrients as Record<string, number> | null)));
+  const microSources = todayItems.filter((i) => i.micronutrients && Object.keys(i.micronutrients).length);
+  const microVerified = microSources.length > 0 &&
+    microSources.every((i) => (i as { microVerified?: boolean }).microVerified);
+  const [showMicros, setShowMicros] = useState(false);
   const remaining = Math.max(caloriesGoal - eaten, 0);
 
   const greetingSize = 20; // fixed — pill already shows profile name prominently
@@ -201,7 +231,7 @@ export default function HomeScreen() {
         <View style={styles.header}>
           <View style={{ flex: 1, marginRight: 12 }}>
             <Text style={[styles.greeting, { fontSize: greetingSize }]} numberOfLines={1}>
-              {profileLoading ? 'Xin chào! 👋' : `Chào, ${profile?.name ?? 'bạn'}! 👋`}
+              {profileLoading ? 'Xin chào!' : `Chào, ${profile?.name ?? 'bạn'}!`}
             </Text>
             <Text style={styles.date}>{TODAY}</Text>
           </View>
@@ -214,7 +244,7 @@ export default function HomeScreen() {
         )}
 
         {/* Calorie card — adaptive */}
-        {summary.isLoading ? (
+        {mealLogs.isLoading ? (
           <View style={[styles.card, { paddingVertical: 32 }]}>
             <ActivityIndicator color={primaryColor} />
           </View>
@@ -266,9 +296,35 @@ export default function HomeScreen() {
             </View>
             {!simplifiedMode && (
               <View style={styles.macroSection}>
-                <MacroBar label="Protein" current={proteinIn} goal={proteinGoal} color={theme.colors.info} />
-                <MacroBar label="Carbs"   current={carbsIn}   goal={carbsGoal}   color={theme.colors.warning} />
-                <MacroBar label="Fat"     current={fatIn}     goal={fatGoal}     color={theme.colors.error} />
+                <MacroBar label="Tinh bột"  current={carbsIn}   goal={carbsGoal}   color={theme.colors.warning} />
+                <MacroBar label="Chất đạm"  current={proteinIn} goal={proteinGoal} color={theme.colors.info} />
+                <MacroBar label="Chất béo"  current={fatIn}     goal={fatGoal}     color={theme.colors.error} />
+              </View>
+            )}
+
+            {/* Micronutrients summary — collapsed by default */}
+            {!simplifiedMode && microRows.length > 0 && (
+              <View style={styles.microWrap}>
+                <TouchableOpacity style={styles.microToggle} onPress={() => setShowMicros((s) => !s)}>
+                  <Ionicons name="leaf-outline" size={16} color={primaryColor} />
+                  <Text style={[styles.microToggleText, { color: primaryColor }]}>
+                    {showMicros ? 'Ẩn vi chất' : `Xem thêm vi chất (${microRows.length})`}
+                  </Text>
+                  <Ionicons name={showMicros ? 'chevron-up' : 'chevron-down'} size={16} color={primaryColor} />
+                </TouchableOpacity>
+                {showMicros && (
+                  <View style={styles.microGrid}>
+                    {microRows.map((r) => (
+                      <View key={r.key} style={styles.microItem}>
+                        <Text style={styles.microLabel}>{r.label}</Text>
+                        <Text style={styles.microValue}>{formatMicroValue(r.value)} {r.unit}</Text>
+                      </View>
+                    ))}
+                    <Text style={styles.microNote}>
+                      {microVerified ? 'Dữ liệu đã xác minh' : 'Ước tính — chỉ mang tính tham khảo'}
+                    </Text>
+                  </View>
+                )}
               </View>
             )}
           </View>
@@ -285,26 +341,51 @@ export default function HomeScreen() {
             </View>
 
             <View style={styles.mealList}>
-              {MEAL_CONFIG.map(({ type, label, icon }) => {
-                const log = mealLogs.data?.find((m) => m.mealType === type);
-                const logCals = log?.items.reduce((s, i) => s + i.calories, 0) ?? 0;
-                const itemNames = log?.items.map((i) => i.foodNameOverride ?? (i.food as any)?.nameVi ?? '').join(', ');
+              {MEAL_CONFIG.map(({ type, label, icon, group }) => {
+                // A meal type can have several logs (e.g. two snacks) — aggregate
+                // them all so the list total matches the daily summary. The snack
+                // group aggregates all 3 sub-types under one "Bữa phụ" row.
+                const logs = mealLogs.data?.filter((m) =>
+                  group ? isSnackType(m.mealType) : m.mealType === type) ?? [];
+                const hasLog = logs.length > 0;
+                const logCals = logs.reduce(
+                  (s, l) => s + l.items.reduce((is, i) => is + i.calories, 0), 0,
+                );
+                const itemNames = logs
+                  .flatMap((l) => l.items.map((i) => i.foodNameOverride ?? (i.food as any)?.nameVi ?? ''))
+                  .join(', ');
                 const rowH = isSenior ? 72 : 54;
+
+                const goToDetail = () => {
+                  if (!profile?.id) return router.push('/(tabs)/camera');
+                  // Snack group → sub-type chooser; other meals → item detail.
+                  if (group) {
+                    return router.push({ pathname: '/meal/snacks', params: { profileId: profile.id } });
+                  }
+                  return hasLog
+                    ? router.push({ pathname: '/meal/[type]', params: { type, profileId: profile.id } })
+                    : router.push('/(tabs)/camera');
+                };
 
                 return (
                   <TouchableOpacity
                     key={type}
-                    style={[styles.mealRow, !log && styles.mealRowEmpty, { minHeight: rowH }]}
-                    onPress={() => router.push('/(tabs)/camera')}
+                    style={[styles.mealRow, !hasLog && styles.mealRowEmpty, { minHeight: rowH }]}
+                    onPress={goToDetail}
                   >
-                    <Text style={[styles.mealIcon, isSenior && { fontSize: 28 }]}>{icon}</Text>
+                    <Ionicons
+                      name={icon}
+                      size={isSenior ? 28 : 22}
+                      color={primaryColor}
+                      style={{ marginRight: 12 }}
+                    />
                     <View style={{ flex: 1 }}>
                       <Text style={[styles.mealType, isSenior && { fontSize: 17 }]}>{label}</Text>
                       <Text style={styles.mealTime} numberOfLines={1}>
-                        {log ? itemNames : 'Chưa ghi nhận'}
+                        {hasLog ? itemNames : 'Chưa ghi nhận'}
                       </Text>
                     </View>
-                    {log
+                    {hasLog
                       ? <Text style={[styles.mealCal, isSenior && { fontSize: 16 }, { color: primaryColor }]}>
                           {Math.round(logCals)} kcal
                         </Text>
@@ -325,10 +406,14 @@ export default function HomeScreen() {
               {mealLogs.data?.map((log) => {
                 const time = new Date(log.loggedAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
                 const item = log.items[0];
-                const label = log.mealType === 'formula' ? '🍼' : '🥣';
                 return (
                   <View key={log.id} style={styles.mealRow}>
-                    <Text style={{ fontSize: 22, marginRight: 12 }}>{label}</Text>
+                    <Ionicons
+                      name={log.mealType === 'formula' ? 'water-outline' : 'restaurant-outline'}
+                      size={22}
+                      color={theme.colors.primary}
+                      style={{ marginRight: 12 }}
+                    />
                     <View style={{ flex: 1 }}>
                       <Text style={styles.mealType}>{item?.foodNameOverride ?? 'Bữa ăn'}</Text>
                       <Text style={styles.mealTime}>{time} · {Math.round(item?.portionGrams ?? 0)}g/ml</Text>
@@ -452,11 +537,24 @@ function createStyles(theme: Theme) {
     calStatVal: { fontSize: 13, fontWeight: '600', color: theme.colors.text },
     macroSection: { gap: 8 },
     macroItem: { flexDirection: 'row', alignItems: 'center', gap: 10 },
-    macroLabel: { width: 50, fontSize: 12, color: theme.colors.textSecondary },
+    macroLabel: { width: 62, fontSize: 12, color: theme.colors.textSecondary },
     macroTrack: { flex: 1, height: 6, backgroundColor: theme.colors.divider, borderRadius: 3, overflow: 'hidden' },
     macroFill: { height: 6, borderRadius: 3 },
     macroValue: { fontSize: 12, fontWeight: '600', color: theme.colors.text, width: 55, textAlign: 'right' },
     macroGoal: { fontSize: 10, color: theme.colors.textTertiary, fontWeight: '400' },
+
+    // Micronutrients summary
+    microWrap: { marginTop: 14, borderTopWidth: 1, borderTopColor: theme.colors.divider, paddingTop: 10 },
+    microToggle: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+    microToggleText: { flex: 1, fontSize: 13, fontWeight: '600' },
+    microGrid: { flexDirection: 'row', flexWrap: 'wrap', marginTop: 10 },
+    microItem: {
+      width: '50%', flexDirection: 'row', justifyContent: 'space-between',
+      paddingVertical: 6, paddingRight: 12,
+    },
+    microLabel: { fontSize: 12, color: theme.colors.textSecondary },
+    microValue: { fontSize: 12, fontWeight: '700', color: theme.colors.text },
+    microNote: { width: '100%', fontSize: 11, color: theme.colors.textTertiary, marginTop: 6, fontStyle: 'italic' },
 
     // Meal section
     section: { paddingHorizontal: 16, marginBottom: 16 },

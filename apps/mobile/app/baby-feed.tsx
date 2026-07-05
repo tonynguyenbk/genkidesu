@@ -12,10 +12,14 @@ import { useAppTheme, useThemedStyles } from '../contexts/ThemeContext';
 
 type FeedType = 'breast_milk' | 'formula' | 'solid';
 
-const FEED_OPTIONS: { type: FeedType; label: string; emoji: string; unit: string; defaultAmount: number }[] = [
-  { type: 'breast_milk', label: 'Sữa mẹ', emoji: '🤱', unit: 'ml', defaultAmount: 120 },
-  { type: 'formula',     label: 'Sữa công thức', emoji: '🍼', unit: 'ml', defaultAmount: 150 },
-  { type: 'solid',       label: 'Ăn dặm', emoji: '🥣', unit: 'g', defaultAmount: 80 },
+const FEED_OPTIONS: {
+  type: FeedType; label: string;
+  icon: React.ComponentProps<typeof Ionicons>['name'];
+  unit: string; defaultAmount: number;
+}[] = [
+  { type: 'breast_milk', label: 'Sữa mẹ', icon: 'heart-outline', unit: 'ml', defaultAmount: 120 },
+  { type: 'formula',     label: 'Sữa công thức', icon: 'water-outline', unit: 'ml', defaultAmount: 150 },
+  { type: 'solid',       label: 'Ăn dặm', icon: 'restaurant-outline', unit: 'g', defaultAmount: 80 },
 ];
 
 // Nutrition per 100ml/100g
@@ -110,7 +114,7 @@ export default function BabyFeedScreen() {
                   style={[styles.optionCard, feedType === opt.type && styles.optionCardActive]}
                   onPress={() => setFeedType(opt.type)}
                 >
-                  <Text style={styles.optionEmoji}>{opt.emoji}</Text>
+                  <Ionicons name={opt.icon} size={24} color={theme.colors.primary} style={{ marginRight: 4 }} />
                   <View>
                     <Text style={[styles.optionLabel, feedType === opt.type && styles.optionLabelActive]}>
                       {opt.label}
@@ -132,7 +136,7 @@ export default function BabyFeedScreen() {
           <>
             <Text style={styles.stepTitle}>Số lượng</Text>
             <Text style={styles.stepSub}>
-              {selected.emoji} {selected.label} — nhập {selected.unit}
+              {selected.label} — nhập {selected.unit}
             </Text>
 
             <View style={styles.amountRow}>

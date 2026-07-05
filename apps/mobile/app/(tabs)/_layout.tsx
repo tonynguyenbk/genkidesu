@@ -1,4 +1,5 @@
 import { Tabs } from 'expo-router';
+import { NativeTabs, Icon, Label } from 'expo-router/unstable-native-tabs';
 import { Platform, View, StyleSheet, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useAppTheme } from '../../contexts/ThemeContext';
@@ -9,10 +10,42 @@ function TabIcon({ name, color, size }: { name: IoniconName; color: string; size
   return <Ionicons name={name} size={size} color={color} />;
 }
 
-export default function TabsLayout() {
+// iOS: real UITabBar via NativeTabs — picks up Liquid Glass automatically on
+// iOS 26/27 devices, SF Symbols, system behaviors (no JS re-implementation).
+function IOSNativeTabsLayout() {
+  const { theme } = useAppTheme();
+  return (
+    <NativeTabs tintColor={theme.colors.primary}>
+      <NativeTabs.Trigger name="index">
+        <Label>Trang chủ</Label>
+        <Icon sf={{ default: 'house', selected: 'house.fill' }} />
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="stats">
+        <Label>Thống kê</Label>
+        <Icon sf="chart.bar.fill" />
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="camera">
+        <Label>Chụp ảnh</Label>
+        <Icon sf={{ default: 'camera', selected: 'camera.fill' }} />
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="group">
+        <Label>Nhóm</Label>
+        <Icon sf={{ default: 'person.2', selected: 'person.2.fill' }} />
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="profile">
+        <Label>Hồ sơ</Label>
+        <Icon sf={{ default: 'person.crop.circle', selected: 'person.crop.circle.fill' }} />
+      </NativeTabs.Trigger>
+      {/* Group management routes stay reachable but off the tab bar */}
+      <NativeTabs.Trigger name="family" hidden />
+    </NativeTabs>
+  );
+}
+
+// Android + web: JS tab bar (web hides it on wide screens — sidebar handles nav)
+function JsTabsLayout() {
   const { width } = useWindowDimensions();
   const { theme } = useAppTheme();
-  // Hide tab bar on wide web (sidebar handles nav), show on mobile web (<768px)
   const hideTabBar = Platform.OS === 'web' && width >= 768;
 
   return (
@@ -26,12 +59,12 @@ export default function TabsLayout() {
           : {
               backgroundColor: theme.colors.surface,
               borderTopColor: theme.colors.divider,
-              borderTopWidth: 1,
+              borderTopWidth: StyleSheet.hairlineWidth,
               height: 60,
               paddingBottom: 8,
               paddingTop: 4,
             },
-        tabBarLabelStyle: { fontSize: 11, fontWeight: '500' },
+        tabBarLabelStyle: { fontSize: 10, fontWeight: '500' },
       }}
     >
       <Tabs.Screen
@@ -39,6 +72,13 @@ export default function TabsLayout() {
         options={{
           title: 'Trang chủ',
           tabBarIcon: ({ color, size }) => <TabIcon name="home" color={color} size={size} />,
+        }}
+      />
+      <Tabs.Screen
+        name="stats"
+        options={{
+          title: 'Thống kê',
+          tabBarIcon: ({ color, size }) => <TabIcon name="bar-chart" color={color} size={size} />,
         }}
       />
       <Tabs.Screen
@@ -53,16 +93,9 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="stats"
+        name="group"
         options={{
-          title: 'Thống kê',
-          tabBarIcon: ({ color, size }) => <TabIcon name="bar-chart" color={color} size={size} />,
-        }}
-      />
-      <Tabs.Screen
-        name="family"
-        options={{
-          title: 'Gia đình',
+          title: 'Nhóm',
           tabBarIcon: ({ color, size }) => <TabIcon name="people" color={color} size={size} />,
         }}
       />
@@ -73,8 +106,15 @@ export default function TabsLayout() {
           tabBarIcon: ({ color, size }) => <TabIcon name="person-circle" color={color} size={size} />,
         }}
       />
+      {/* Group management (create/join/invite/privacy) — reachable from the
+          Nhóm tab's settings icon, hidden from the tab bar itself. */}
+      <Tabs.Screen name="family" options={{ href: null }} />
     </Tabs>
   );
+}
+
+export default function TabsLayout() {
+  return Platform.OS === 'ios' ? <IOSNativeTabsLayout /> : <JsTabsLayout />;
 }
 
 const styles = StyleSheet.create({

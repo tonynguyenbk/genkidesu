@@ -6,10 +6,7 @@ import type { Theme } from '@genki/ui';
 import { trpc } from '../../lib/trpc';
 import { useActiveProfile } from '../../hooks/useActiveProfile';
 import { useAppTheme, useThemedStyles } from '../../contexts/ThemeContext';
-
-const MEAL_LABELS: Record<string, string> = {
-  breakfast: '🌅 Sáng', lunch: '☀️ Trưa', dinner: '🌙 Tối', snack: '🍎 Snack',
-};
+import { mealIcon, mealLabel, mealOrder } from '../../lib/mealTypes';
 
 function formatDate(d: Date): string {
   return d.toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'numeric' });
@@ -97,7 +94,7 @@ export default function MealHistoryScreen() {
           <ActivityIndicator color={theme.colors.primary} style={{ marginTop: 40 }} />
         ) : logs.data?.length === 0 ? (
           <View style={styles.empty}>
-            <Text style={{ fontSize: 40 }}>🍽️</Text>
+            <Ionicons name="restaurant-outline" size={36} color={theme.colors.textTertiary} />
             <Text style={styles.emptyTitle}>Chưa ghi nhận bữa ăn nào</Text>
             {isToday && (
               <TouchableOpacity style={styles.logBtn} onPress={() => router.push('/(tabs)/camera')}>
@@ -107,13 +104,16 @@ export default function MealHistoryScreen() {
           </View>
         ) : (
           <View style={styles.logList}>
-            {logs.data?.map((log) => {
+            {[...(logs.data ?? [])]
+              .sort((a, b) => mealOrder(a.mealType) - mealOrder(b.mealType) ||
+                +new Date(a.loggedAt) - +new Date(b.loggedAt))
+              .map((log) => {
               const totalCal = log.items.reduce((s, i) => s + i.calories, 0);
               const time = new Date(log.loggedAt).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
               return (
                 <View key={log.id} style={styles.logCard}>
                   <View style={styles.logHeader}>
-                    <Text style={styles.logMealType}>{MEAL_LABELS[log.mealType] ?? log.mealType}</Text>
+                    <Text style={styles.logMealType}>{mealLabel(log.mealType)}</Text>
                     <Text style={styles.logTime}>{time}</Text>
                     <Text style={styles.logCal}>{Math.round(totalCal)} kcal</Text>
                   </View>

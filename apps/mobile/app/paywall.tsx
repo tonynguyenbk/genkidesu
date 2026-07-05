@@ -12,15 +12,15 @@ import { useAppTheme, useThemedStyles } from '../contexts/ThemeContext';
 type PlanId = 'free' | 'pro' | 'family';
 
 const PLAN_COLORS: Record<PlanId, string> = {
-  free: '#6B7280',
-  pro: '#2ECC71',
-  family: '#8B5CF6',
+  free: '#8E8E93',   // iOS systemGray
+  pro: '#34C759',    // iOS systemGreen
+  family: '#AF52DE', // iOS systemPurple
 };
 
 const PLAN_BG: Record<PlanId, string> = {
-  free: '#F9FAFB',
-  pro: '#F0FDF4',
-  family: '#F5F3FF',
+  free: '#F2F2F7',
+  pro: '#E9F8EE',
+  family: '#F5EAFB',
 };
 
 function CheckItem({ text, color }: { text: string; color: string }) {
@@ -144,7 +144,9 @@ export default function PaywallScreen() {
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.content}>
         {/* Hero */}
         <View style={styles.hero}>
-          <Text style={styles.heroEmoji}>✨</Text>
+          <View style={styles.heroGlyph}>
+            <Ionicons name="sparkles" size={30} color={PLAN_COLORS.pro} />
+          </View>
           <Text style={styles.heroTitle}>Mở khóa toàn bộ tính năng</Text>
           <Text style={styles.heroSub}>
             Theo dõi dinh dưỡng không giới hạn, AI tư vấn cá nhân,{'\n'}đồng bộ wearable và nhiều hơn nữa
@@ -182,7 +184,7 @@ export default function PaywallScreen() {
             { feature: 'Vi chất dinh dưỡng', free: '3 loại', pro: '15+ loại', family: '15+ loại' },
             { feature: 'AI tư vấn', free: '–', pro: '✓', family: '✓' },
             { feature: 'Wearable sync', free: '–', pro: '✓', family: '✓' },
-            { feature: 'Dashboard gia đình', free: '–', pro: '–', family: '✓' },
+            { feature: 'Dashboard nhóm', free: '–', pro: '–', family: '✓' },
           ].map((row, i) => (
             <View key={row.feature} style={[styles.compareRow, i % 2 === 0 && styles.compareRowEven]}>
               <Text style={styles.compareFeature}>{row.feature}</Text>
@@ -202,14 +204,14 @@ export default function PaywallScreen() {
 
         {/* Trust signals */}
         <View style={styles.trustRow}>
-          {[
-            { icon: '🔒', text: 'Bảo mật tuyệt đối' },
-            { icon: '↩️', text: 'Hoàn tiền 7 ngày' },
-            { icon: '❌', text: 'Hủy bất cứ lúc nào' },
-          ].map((t) => (
-            <View key={t.text} style={styles.trustItem}>
-              <Text style={{ fontSize: 18 }}>{t.icon}</Text>
-              <Text style={styles.trustText}>{t.text}</Text>
+          {([
+            ['lock-closed-outline', 'Bảo mật tuyệt đối'],
+            ['refresh-outline', 'Hoàn tiền 7 ngày'],
+            ['close-circle-outline', 'Hủy bất cứ lúc nào'],
+          ] as const).map(([icon, text]) => (
+            <View key={text} style={styles.trustItem}>
+              <Ionicons name={icon} size={18} color={theme.colors.textSecondary} />
+              <Text style={styles.trustText}>{text}</Text>
             </View>
           ))}
         </View>
@@ -262,7 +264,10 @@ function createStyles(theme: Theme) {
     content: { paddingHorizontal: 16, paddingTop: 8 },
 
     hero: { alignItems: 'center', paddingVertical: 24, gap: 8 },
-    heroEmoji: { fontSize: 48 },
+    heroGlyph: {
+      width: 64, height: 64, borderRadius: 20, backgroundColor: PLAN_BG.pro,
+      alignItems: 'center', justifyContent: 'center',
+    },
     heroTitle: { fontSize: 22, fontWeight: '800', color: theme.colors.text, textAlign: 'center' },
     heroSub: { fontSize: 14, color: theme.colors.textTertiary, textAlign: 'center', lineHeight: 22 },
 
