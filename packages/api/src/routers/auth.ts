@@ -1,7 +1,7 @@
 import { TRPCError } from '@trpc/server';
 import { z } from 'zod';
 import { Redis } from 'ioredis';
-import { publicProcedure, router } from '../trpc.js';
+import { protectedProcedure, publicProcedure, router } from '../trpc.js';
 import {
   signAccessToken,
   signRefreshToken,
@@ -127,15 +127,28 @@ export const authRouter = router({
   sendOTP: publicProcedure
     .input(z.object({ phone: z.string().regex(/^(\+84|0)\d{9,10}$/) }))
     .mutation(async ({ input }) => {
+      const smsEnabled = !!process.env['TWILIO_ACCOUNT_SID'];
+      const isProduction = process.env['NODE_ENV'] === 'production';
+      // Anyone can call sendOTP with someone else's number — the OTP must never
+      // leave the server in production. Until Twilio actually sends the SMS,
+      // phone login is dev-only.
+      if (isProduction && !smsEnabled) {
+        throw new TRPCError({
+          code: 'PRECONDITION_FAILED',
+          message: 'Đăng nhập bằng SĐT chưa khả dụng. Vui lòng dùng Google.',
+        });
+      }
       const otp = generateOTP();
       await storeOTP(input.phone, otp);
-      const smsEnabled = !!process.env['TWILIO_ACCOUNT_SID'];
-      console.log(`[OTP] ${input.phone}: ${otp} (sms=${smsEnabled})`);
+      if (!isProduction) {
+        console.log(`[OTP] ${input.phone}: ${otp} (sms=${smsEnabled})`);
+      }
+      // TODO(Twilio): send SMS here when TWILIO_ACCOUNT_SID is configured
       return {
         success: true,
         expiresIn: OTP_TTL,
-        // Return OTP directly until Twilio is configured
-        devOtp: smsEnabled ? null : otp,
+        // OTP in the response is a dev-only convenience — never in production
+        devOtp: isProduction || smsEnabled ? null : otp,
       };
     }),
 
@@ -149,13 +162,12 @@ export const authRouter = router({
       if (stored !== input.otp) {
         throw new TRPCError({ code: 'BAD_REQUEST', message: 'Mã OTP không đúng' });
       }
-      await deleteOTP(input.phone);
-
       const user = await ctx.prisma.user.upsert({
         where: { phone: input.phone },
         update: { lastLoginAt: new Date() },
         create: { phone: input.phone, authProvider: 'phone', isActive: true },
       });
+      await deleteOTP(input.phone); // delete only after DB succeeds
       await ensureDefaultProfile(user.id, ctx.prisma);
       return createSession(user.id, ctx.prisma);
     }),
@@ -187,6 +199,18 @@ export const authRouter = router({
       where: { id: ctx.userId },
       include: { profiles: true },
     });
+  }),
+
+  // Google Play requires an in-app account deletion path. Deleting the user
+  // cascades to profiles, sessions, meal logs, summaries, etc. Families owned
+  // by the user have no cascade — remove them explicitly first.
+  deleteAccount: protectedProcedure.mutation(async ({ ctx }) => {
+    const userId = ctx.userId!;
+    await ctx.prisma.$transaction([
+      ctx.prisma.family.deleteMany({ where: { ownerId: userId } }),
+      ctx.prisma.user.delete({ where: { id: userId } }),
+    ]);
+    return { success: true };
   }),
 });
 

@@ -15,6 +15,9 @@ const server = Fastify({
   // whose joined procedure names exceed that, so raise it well above
   // what a real batched request could need.
   maxParamLength: 5000,
+  // Meal photos travel inline as base64 data URLs (resized to ≤1024px on the
+  // client, but still well over Fastify's 1MB default with batching overhead).
+  bodyLimit: 10 * 1024 * 1024,
 });
 
 await server.register(cors, { origin: true, credentials: true });

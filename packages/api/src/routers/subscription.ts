@@ -1,5 +1,6 @@
 import { z } from 'zod';
 import { protectedProcedure, publicProcedure, router } from '../trpc.js';
+import { getScansUsedToday } from '../services/scan-quota.js';
 
 export type SubscriptionPlan = 'free' | 'pro' | 'family';
 
@@ -10,7 +11,7 @@ const PLANS = [
     price: 0,
     priceLabel: '0đ',
     period: 'mãi mãi',
-    color: '#6B7280',
+    color: '#8E8E93',
     features: [
       '3 ảnh/ngày',
       'Nhật ký 7 ngày',
@@ -25,7 +26,7 @@ const PLANS = [
     price: 59000,
     priceLabel: '59.000đ',
     period: '/tháng',
-    color: '#2ECC71',
+    color: '#34C759',
     badge: 'Phổ biến',
     features: [
       'Không giới hạn ảnh',
@@ -44,7 +45,7 @@ const PLANS = [
     price: 129000,
     priceLabel: '129.000đ',
     period: '/tháng',
-    color: '#8B5CF6',
+    color: '#AF52DE',
     badge: 'Tiết kiệm nhất',
     features: [
       'Tất cả tính năng Pro',
@@ -67,7 +68,7 @@ export const subscriptionRouter = router({
     return {
       plan: 'free' as SubscriptionPlan,
       expiresAt: null as string | null,
-      photosUsedToday: 0,
+      photosUsedToday: await getScansUsedToday(ctx.userId!),
       limits: PLANS[0]!.limits,
     };
   }),

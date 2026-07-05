@@ -2,6 +2,14 @@ import { useState, useEffect, useCallback } from 'react';
 import { Platform } from 'react-native';
 import * as SecureStore from 'expo-secure-store';
 import { useRouter } from 'expo-router';
+import Constants from 'expo-constants';
+import { queryClient } from '../lib/trpc';
+
+// In Expo Go, always start from the login screen: drop any persisted session
+// once per app launch (module-level flag survives re-mounts but not restarts).
+// Standalone/production builds keep the remembered session as normal.
+const isExpoGo = Constants.appOwnership === 'expo';
+let expoGoSessionCleared = false;
 
 const ACCESS_KEY = 'genki_access_token';
 const REFRESH_KEY = 'genki_refresh_token';
@@ -24,10 +32,15 @@ export function useAuth() {
   const router = useRouter();
 
   useEffect(() => {
-    storage.get(ACCESS_KEY).then((t) => {
+    (async () => {
+      if (isExpoGo && !expoGoSessionCleared) {
+        expoGoSessionCleared = true;
+        await Promise.all([storage.delete(ACCESS_KEY), storage.delete(REFRESH_KEY)]);
+      }
+      const t = await storage.get(ACCESS_KEY);
       setToken(t ?? null);
       setLoading(false);
-    });
+    })();
   }, []);
 
   const saveToken = useCallback(async (accessToken: string, refreshToken: string) => {
@@ -43,6 +56,9 @@ export function useAuth() {
       storage.delete(ACCESS_KEY),
       storage.delete(REFRESH_KEY),
     ]);
+    // Drop all cached server data so the next login doesn't see the
+    // previous account's meals/stats from the in-memory query cache.
+    queryClient.clear();
     setToken(null);
     router.replace('/(auth)/login');
   }, [router]);

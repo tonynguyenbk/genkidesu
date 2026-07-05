@@ -13,3 +13,4 @@ coverage
 .cache
 .claude
 test-results
+.test-token
