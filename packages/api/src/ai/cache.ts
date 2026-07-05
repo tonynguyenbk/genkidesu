@@ -57,6 +57,8 @@ export async function analyzeFoodImageCached(
   }
 
   const result = await analyzeFoodImage(imageDataUrl);
-  await setCachedVisionResult(db, imageHash, result);
+  if (!result.fromMock) {
+    await setCachedVisionResult(db, imageHash, result);
+  }
   return result;
 }
