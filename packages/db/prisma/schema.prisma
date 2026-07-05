@@ -90,6 +90,8 @@ model Profile {
   dailySummaries   DailySummary[]
   activityLogs     ActivityLog[]
   growthMeasurements GrowthMeasurement[]
+  syncEventsCreated  MealSyncEvent[]  @relation("SyncedBy")
+  mealSyncMemberships MealSyncMember[]
 
   @@index([userId])
   @@index([type])
@@ -104,13 +106,19 @@ model Family {
   id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   ownerId    String   @map("owner_id") @db.Uuid
   name       String   @db.VarChar(100)
+  // Group template: 'family' (ăn chung mâm cơm, chăm sóc người thân — high
+  // trust, shared meals) vs 'community' (gym/giảm cân/mẹ bỉm — privacy-first,
+  // streak leaderboard). Same structure, different defaults and UI.
+  type       String   @default("family") @db.VarChar(20)
+  maxMembers Int      @default(10) @map("max_members")
   inviteCode String   @unique @map("invite_code") @db.VarChar(8)
   isActive   Boolean  @default(true) @map("is_active")
   createdAt  DateTime @default(now()) @map("created_at") @db.Timestamptz()
   updatedAt  DateTime @updatedAt @map("updated_at") @db.Timestamptz()
 
-  owner   User           @relation("FamilyOwner", fields: [ownerId], references: [id])
-  members FamilyMember[]
+  owner          User            @relation("FamilyOwner", fields: [ownerId], references: [id])
+  members        FamilyMember[]
+  mealSyncEvents MealSyncEvent[]
 
   @@index([ownerId])
   @@index([inviteCode])
@@ -199,6 +207,9 @@ model Food {
   fatPer100g            Float                      @map("fat_per_100g")
   fiberPer100g          Float?                     @map("fiber_per_100g")
   micronutrientsPer100g Json?                      @map("micronutrients_per_100g")
+  // True when micronutrients come from a curated/official source; false when
+  // AI-estimated from the dish name (shown as "Ước tính" vs "Đã xác minh").
+  micronutrientsVerified Boolean                   @default(false) @map("micronutrients_verified")
   typicalPortionG       Float?                     @map("typical_portion_g")
   imageUrl              String?                    @map("image_url") @db.Text
   verified              Boolean                    @default(false)
@@ -226,12 +237,55 @@ model MealLog {
   notes         String?  @db.Text
   loggedAt      DateTime @map("logged_at") @db.Timestamptz()
   createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz()
+  // Set when this meal was created via a meal-sync (source = 'meal_sync').
+  syncEventId   String?  @map("sync_event_id") @db.Uuid
 
-  profile Profile    @relation(fields: [profileId], references: [id], onDelete: Cascade)
-  items   MealItem[]
+  profile           Profile         @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  items             MealItem[]
+  syncEvent         MealSyncEvent?  @relation("SyncCreated", fields: [syncEventId], references: [id], onDelete: SetNull)
+  syncEventsAsSource MealSyncEvent[] @relation("SyncSource")
 
   @@index([profileId, loggedAt])
   @@map("meal_logs")
+}
+
+// ==========================================
+// MEAL SYNC — one person logs a shared meal, it fans out to chosen members
+// ==========================================
+
+model MealSyncEvent {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  sourceMealLogId  String   @map("meal_log_id") @db.Uuid   // the logger's original meal
+  syncedById       String   @map("synced_by") @db.Uuid     // profile that triggered the sync
+  familyId         String   @map("family_id") @db.Uuid
+  syncType         String   @default("meal_sync") @map("sync_type") @db.VarChar(30)
+  createdAt        DateTime @default(now()) @map("created_at") @db.Timestamptz()
+
+  sourceMeal   MealLog          @relation("SyncSource", fields: [sourceMealLogId], references: [id], onDelete: Cascade)
+  syncedBy     Profile          @relation("SyncedBy", fields: [syncedById], references: [id], onDelete: Cascade)
+  family       Family           @relation(fields: [familyId], references: [id], onDelete: Cascade)
+  members      MealSyncMember[]
+  createdMeals MealLog[]        @relation("SyncCreated")
+
+  @@index([familyId])
+  @@map("meal_sync_events")
+}
+
+model MealSyncMember {
+  id           String @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  syncEventId  String @map("sync_event_id") @db.Uuid
+  profileId    String @map("profile_id") @db.Uuid
+  // Ratio (not absolute kcal) so member totals recompute if the source meal's
+  // AI estimate is later corrected. kcalSnapshot is for display at sync time.
+  portionRatio Float  @default(1.0) @map("portion_ratio")
+  kcalSnapshot Int?   @map("kcal_snapshot")
+
+  syncEvent MealSyncEvent @relation(fields: [syncEventId], references: [id], onDelete: Cascade)
+  profile   Profile       @relation(fields: [profileId], references: [id], onDelete: Cascade)
+
+  @@index([syncEventId])
+  @@index([profileId])
+  @@map("meal_sync_members")
 }
 
 model MealItem {
