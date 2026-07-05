@@ -22,10 +22,10 @@ interface FoodItem {
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
-  breakfast: '🌅 Sáng', main_dish: '🍚 Chính', soup: '🍲 Canh',
-  vegetable: '🥬 Rau', protein: '🥩 Thịt/Cá', drink: '🥤 Uống',
-  dessert: '🍮 Tráng miệng', snack: '🍿 Snack', baby_food: '👶 Ăn dặm',
-  formula: '🍼 Sữa', healthy: '💪 Healthy',
+  breakfast: 'Sáng', main_dish: 'Chính', soup: 'Canh',
+  vegetable: 'Rau', protein: 'Thịt/Cá', drink: 'Uống',
+  dessert: 'Tráng miệng', snack: 'Snack', baby_food: 'Ăn dặm',
+  formula: 'Sữa', healthy: 'Healthy',
 };
 
 const QUICK_CATEGORIES = ['breakfast', 'main_dish', 'vegetable', 'protein', 'drink', 'healthy'];
@@ -178,7 +178,7 @@ export default function FoodSearchScreen() {
               >
                 {confirmLog.isPending
                   ? <ActivityIndicator color="#fff" size="small" />
-                  : <Text style={styles.addBtnText}>Thêm vào bữa ăn ✓</Text>
+                  : <Text style={styles.addBtnText}>Thêm vào bữa ăn</Text>
                 }
               </TouchableOpacity>
             </View>
@@ -213,10 +213,20 @@ export default function FoodSearchScreen() {
           ) : null}
           ListEmptyComponent={!isLoading && (query || category) ? (
             <View style={styles.empty}>
-              <Text style={styles.emptyIcon}>🔍</Text>
+              <Ionicons name="search-outline" size={36} color={theme.colors.textTertiary} />
               <Text style={styles.emptyText}>
                 {query ? `Không tìm thấy "${query}"` : 'Không có món nào'}
               </Text>
+              <TouchableOpacity
+                style={styles.teachBtn}
+                onPress={() => router.push({
+                  pathname: '/food/contribute' as any,
+                  params: query ? { name: query } : {},
+                })}
+              >
+                <Ionicons name="school-outline" size={15} color={theme.colors.primary} />
+                <Text style={styles.teachBtnText}>Dạy Genki món này</Text>
+              </TouchableOpacity>
             </View>
           ) : !query && !category ? (
             <View style={styles.hint}>
@@ -269,6 +279,12 @@ function createStyles(theme: Theme) {
     foodCalUnit: { fontSize: 10, color: theme.colors.textTertiary },
     loading: { padding: 24, alignItems: 'center' },
     empty: { padding: 48, alignItems: 'center', gap: 8 },
+    teachBtn: {
+      marginTop: 8, paddingVertical: 10, paddingHorizontal: 20, borderRadius: 20,
+      flexDirection: 'row', alignItems: 'center', gap: 6,
+      borderWidth: 1, borderColor: theme.colors.primary, backgroundColor: theme.colors.surface,
+    },
+    teachBtnText: { color: theme.colors.primary, fontSize: 14, fontWeight: '600' },
     emptyIcon: { fontSize: 40 },
     emptyText: { fontSize: 15, color: theme.colors.textTertiary, textAlign: 'center' },
     hint: { padding: 48, alignItems: 'center' },

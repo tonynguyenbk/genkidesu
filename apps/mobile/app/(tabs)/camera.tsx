@@ -4,21 +4,27 @@ import {
   Platform, ActivityIndicator, ScrollView, Alert, Image,
 } from 'react-native';
 import * as ImagePicker from 'expo-image-picker';
-import { useRouter } from 'expo-router';
+import * as ImageManipulator from 'expo-image-manipulator';
+import { useRouter, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import type { Theme } from '@genki/ui';
 import { trpc } from '../../lib/trpc';
+import { setPendingScan } from '../../lib/scanHandoff';
+import { isSnackType, resolveSnackSubtype } from '../../lib/mealTypes';
 import { useProfileTheme } from '../../hooks/useProfileTheme';
 import { useActiveProfile } from '../../hooks/useActiveProfile';
 import { useAppTheme, useThemedStyles } from '../../contexts/ThemeContext';
 
-type MealType = 'breakfast' | 'lunch' | 'dinner' | 'snack';
+type MealType = string;
 
-const MEAL_TYPES: { id: MealType; label: string; icon: string; time: string }[] = [
-  { id: 'breakfast', label: 'Bữa sáng', icon: '🌅', time: '6:00 – 10:00' },
-  { id: 'lunch',     label: 'Bữa trưa', icon: '☀️',  time: '11:00 – 14:00' },
-  { id: 'dinner',    label: 'Bữa tối',  icon: '🌙',  time: '17:00 – 21:00' },
-  { id: 'snack',     label: 'Snack',    icon: '🍎',  time: 'Bất kỳ lúc nào' },
+// The snack chip stands in for the whole "Bữa phụ" group; selecting it resolves
+// to a time-based sub-type. Precise sub-type (phụ sáng/chiều/tối) can be chosen
+// on the result screen or via the Bữa phụ chooser.
+const MEAL_TYPES: { id: MealType; label: string; icon: React.ComponentProps<typeof Ionicons>['name']; time: string }[] = [
+  { id: 'breakfast', label: 'Bữa sáng', icon: 'partly-sunny-outline', time: '6:00 – 10:00' },
+  { id: 'lunch',     label: 'Bữa trưa', icon: 'sunny-outline',        time: '11:00 – 14:00' },
+  { id: 'dinner',    label: 'Bữa tối',  icon: 'moon-outline',         time: '17:00 – 21:00' },
+  { id: 'snack',     label: 'Bữa phụ',  icon: 'nutrition-outline',    time: 'Bất kỳ lúc nào' },
 ];
 
 function getDefaultMealType(): MealType {
@@ -26,20 +32,41 @@ function getDefaultMealType(): MealType {
   if (h >= 6 && h < 10)  return 'breakfast';
   if (h >= 11 && h < 14) return 'lunch';
   if (h >= 17 && h < 21) return 'dinner';
-  return 'snack';
+  return resolveSnackSubtype();
 }
 
 export default function CameraScreen() {
   const router = useRouter();
   const styles = useThemedStyles(createStyles);
   const { theme } = useAppTheme();
+  const { mealType: presetMealType, date: presetDate } = useLocalSearchParams<{ mealType?: string; date?: string }>();
   const [imageUri, setImageUri] = useState<string | null>(null);
-  const [mealType, setMealType] = useState<MealType>(getDefaultMealType());
+  // Honour a preset meal type (e.g. opened from the Bữa phụ chooser) over the
+  // time-based default.
+  const [mealType, setMealType] = useState<MealType>(presetMealType ?? getDefaultMealType());
   const [scanning, setScanning] = useState(false);
 
   const { activeProfile } = useActiveProfile();
   const scan = trpc.meal.scan.useMutation();
   const { isBaby, isSenior, primaryColor, buttonHeight } = useProfileTheme();
+
+  // The API can't read file:// URIs from the device — the image must travel
+  // inline as a base64 data URL. On native, resize/compress first (spec:
+  // max 1024px) so the payload stays small; web already gets base64 directly.
+  const toDataUrl = useCallback(async (asset: ImagePicker.ImagePickerAsset): Promise<string> => {
+    if (Platform.OS === 'web') {
+      return asset.base64
+        ? `data:${asset.mimeType ?? 'image/jpeg'};base64,${asset.base64}`
+        : asset.uri;
+    }
+    const actions = asset.width && asset.width > 1024 ? [{ resize: { width: 1024 } }] : [];
+    const resized = await ImageManipulator.manipulateAsync(asset.uri, actions, {
+      compress: 0.7,
+      format: ImageManipulator.SaveFormat.JPEG,
+      base64: true,
+    });
+    return `data:image/jpeg;base64,${resized.base64}`;
+  }, []);
 
   const pickImage = useCallback(async (fromCamera: boolean) => {
     if (Platform.OS === 'web' || !fromCamera) {
@@ -51,7 +78,7 @@ export default function CameraScreen() {
         aspect: [4, 3],
       });
       if (!result.canceled && result.assets[0]) {
-        setImageUri(result.assets[0].uri);
+        setImageUri(await toDataUrl(result.assets[0]));
       }
     } else {
       const { status } = await ImagePicker.requestCameraPermissionsAsync();
@@ -61,15 +88,14 @@ export default function CameraScreen() {
       }
       const result = await ImagePicker.launchCameraAsync({
         quality: 0.8,
-        base64: true,
         allowsEditing: true,
         aspect: [4, 3],
       });
       if (!result.canceled && result.assets[0]) {
-        setImageUri(result.assets[0].uri);
+        setImageUri(await toDataUrl(result.assets[0]));
       }
     }
-  }, []);
+  }, [toDataUrl]);
 
   const handleScan = useCallback(async () => {
     if (!imageUri) return;
@@ -84,17 +110,12 @@ export default function CameraScreen() {
       const result = await scan.mutateAsync({
         imageDataUrl: imageUri,
         profileId,
-        mealType,
+        mealType: mealType as 'snack',
       });
-      router.push({
-        pathname: '/meal/result',
-        params: {
-          scanData: JSON.stringify(result),
-          profileId,
-          mealType,
-          imageUri,
-        },
-      });
+      // Pass via in-memory store, not URL params — the base64 image would blow
+      // past the dev server's URL/header limit (HTTP 431) on web.
+      setPendingScan({ scanData: result, imageUri, profileId, mealType, loggedDate: presetDate });
+      router.push('/meal/result');
     } catch (e) {
       Alert.alert('Lỗi', 'Không thể phân tích ảnh. Thử lại sau.');
     } finally {
@@ -111,13 +132,27 @@ export default function CameraScreen() {
           <Text style={styles.sub}>Chụp ảnh để AI phân tích dinh dưỡng</Text>
         </View>
 
+        {/* Back-dating banner — only when logging into a past day */}
+        {(() => {
+          if (!presetDate) return null;
+          const d = new Date(presetDate);
+          if (d.toDateString() === new Date().toDateString()) return null;
+          const label = d.toLocaleDateString('vi-VN', { weekday: 'long', day: 'numeric', month: 'numeric' });
+          return (
+            <View style={styles.backdateBanner}>
+              <Ionicons name="calendar" size={16} color={theme.colors.primary} />
+              <Text style={styles.backdateText}>Đang ghi cho: {label}</Text>
+            </View>
+          );
+        })()}
+
         {/* Baby feed shortcut */}
         {isBaby && (
           <TouchableOpacity
             style={styles.babyBanner}
             onPress={() => router.push('/baby-feed')}
           >
-            <Text style={{ fontSize: 28 }}>🍼</Text>
+            <Ionicons name="heart-circle-outline" size={30} color={primaryColor} />
             <View style={{ flex: 1 }}>
               <Text style={styles.babyBannerTitle}>Ghi nhận bữa ăn cho bé</Text>
               <Text style={styles.babyBannerSub}>Sữa mẹ · Sữa công thức · Ăn dặm</Text>
@@ -128,18 +163,27 @@ export default function CameraScreen() {
 
         {/* Meal type selector */}
         <View style={styles.mealTypeRow}>
-          {MEAL_TYPES.map((m) => (
-            <TouchableOpacity
-              key={m.id}
-              style={[styles.mealTypeBtn, mealType === m.id && styles.mealTypeBtnActive]}
-              onPress={() => setMealType(m.id)}
-            >
-              <Text style={styles.mealTypeIcon}>{m.icon}</Text>
-              <Text style={[styles.mealTypeLabel, mealType === m.id && styles.mealTypeLabelActive]}>
-                {m.label}
-              </Text>
-            </TouchableOpacity>
-          ))}
+          {MEAL_TYPES.map((m) => {
+            // The snack chip represents the whole group, so it stays active for
+            // any snack sub-type and resolves to a time-based one when tapped.
+            const active = m.id === 'snack' ? isSnackType(mealType) : mealType === m.id;
+            return (
+              <TouchableOpacity
+                key={m.id}
+                style={[styles.mealTypeBtn, active && styles.mealTypeBtnActive]}
+                onPress={() => setMealType(m.id === 'snack' ? resolveSnackSubtype() : m.id)}
+              >
+                <Ionicons
+                  name={m.icon}
+                  size={20}
+                  color={active ? primaryColor : theme.colors.textSecondary}
+                />
+                <Text style={[styles.mealTypeLabel, active && styles.mealTypeLabelActive]}>
+                  {m.label}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
         {/* Image area */}
@@ -234,7 +278,10 @@ export default function CameraScreen() {
         {/* Tips */}
         {!imageUri && (
           <View style={styles.tips}>
-            <Text style={styles.tipsTitle}>💡 Mẹo chụp ảnh</Text>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+              <Ionicons name="bulb-outline" size={16} color={theme.colors.warning} />
+              <Text style={styles.tipsTitle}>Mẹo chụp ảnh</Text>
+            </View>
             {[
               'Chụp từ phía trên, đủ sáng',
               'Đảm bảo thấy toàn bộ món ăn trong khung hình',
@@ -259,6 +306,12 @@ function createStyles(theme: Theme) {
     },
     title: { fontSize: 24, fontWeight: '800', color: theme.colors.text },
     sub: { fontSize: 13, color: theme.colors.textTertiary, marginTop: 2 },
+    backdateBanner: {
+      flexDirection: 'row', alignItems: 'center', gap: 8,
+      marginHorizontal: 16, marginBottom: 12, padding: 10, borderRadius: 12,
+      backgroundColor: theme.colors.surfaceAlt, borderWidth: 1, borderColor: theme.colors.primary,
+    },
+    backdateText: { fontSize: 13, fontWeight: '600', color: theme.colors.primary },
 
     mealTypeRow: { flexDirection: 'row', paddingHorizontal: 16, gap: 8, marginBottom: 16 },
     mealTypeBtn: {
